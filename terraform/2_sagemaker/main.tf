@@ -8,18 +8,18 @@ terraform {
     }
   }
   
-  # Using local backend - state will be stored in terraform.tfstate in this directory
-  # This is automatically gitignored for security
+  # Usando backend local - el estado se almacenará en terraform.tfstate en este directorio
+  # Esto está en el .gitignore automáticamente por seguridad
 }
 
 provider "aws" {
   region = var.aws_region
 }
 
-# Data source for current caller identity
+# Fuente de datos para la identidad actual del llamador
 data "aws_caller_identity" "current" {}
 
-# IAM role for SageMaker
+# Rol IAM para SageMaker
 resource "aws_iam_role" "sagemaker_role" {
   name = "alex-sagemaker-role"
 
@@ -42,7 +42,7 @@ resource "aws_iam_role_policy_attachment" "sagemaker_full_access" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
 }
 
-# SageMaker Model
+# Modelo de SageMaker
 resource "aws_sagemaker_model" "embedding_model" {
   name               = "alex-embedding-model"
   execution_role_arn = aws_iam_role.sagemaker_role.arn
@@ -58,7 +58,7 @@ resource "aws_sagemaker_model" "embedding_model" {
   depends_on = [aws_iam_role_policy_attachment.sagemaker_full_access]
 }
 
-# Serverless Inference Config
+# Configuración de inferencia serverless
 resource "aws_sagemaker_endpoint_configuration" "serverless_config" {
   name = "alex-embedding-serverless-config"
 
@@ -67,12 +67,12 @@ resource "aws_sagemaker_endpoint_configuration" "serverless_config" {
     
     serverless_config {
       memory_size_in_mb = 3072
-      max_concurrency   = 2  # Reduced from 10 to avoid quota limit
+      max_concurrency   = 2  # Reducido de 10 para evitar el límite de cuota
     }
   }
 }
 
-# Add a delay for IAM role propagation before creating endpoint
+# Añadir un retardo para la propagación del rol IAM antes de crear el endpoint
 resource "time_sleep" "wait_for_iam_propagation" {
   depends_on = [
     aws_iam_role_policy_attachment.sagemaker_full_access
@@ -81,7 +81,7 @@ resource "time_sleep" "wait_for_iam_propagation" {
   create_duration = "15s"
 }
 
-# SageMaker Endpoint
+# Endpoint de SageMaker
 resource "aws_sagemaker_endpoint" "embedding_endpoint" {
   name                 = "alex-embedding-endpoint"
   endpoint_config_name = aws_sagemaker_endpoint_configuration.serverless_config.name

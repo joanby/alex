@@ -1,118 +1,118 @@
-# Building Alex: Part 3 - Ingestion Pipeline with S3 Vectors
+# Construyendo Alex: Parte 3 - Pipeline de Ingesta con S3 Vectors
 
-Welcome back! In this guide, we'll deploy a cost-effective vector storage solution using AWS S3 Vectors:
-- S3 Vectors for vector storage (90% cheaper than OpenSearch!)
-- Lambda function for document ingestion  
-- API Gateway with API key authentication
-- Integration with the SageMaker embedding endpoint
+¡Bienvenido de nuevo! En esta guía, vamos a desplegar una solución de almacenamiento vectorial rentable usando AWS S3 Vectors:
+- S3 Vectors para almacenamiento vectorial (¡90% más barato que OpenSearch!)
+- Función Lambda para la ingestión de documentos  
+- API Gateway con autenticación mediante API key
+- Integración con el endpoint de embeddings de SageMaker
 
-## Prerequisites
-- Completed [Guide 1](1_permissions.md) (AWS setup)
-- Completed [Guide 2](2_sagemaker.md) (SageMaker deployment)
-- AWS CLI configured
-- Terraform installed
-- Python with `uv` package manager installed
+## Requisitos Previos
+- Haber completado la [Guía 1](1_permissions.md) (Configuración de AWS)
+- Haber completado la [Guía 2](2_sagemaker.md) (Despliegue de SageMaker)
+- AWS CLI configurado
+- Terraform instalado
+- Python con el gestor de paquetes `uv` instalado
 
-## REMINDER - MAJOR TIP!!
+## RECORDATORIO - ¡GRAN CONSEJO!
 
-There's a file `gameplan.md` in the project root that describes the entire Alex project to an AI Agent, so that you can ask questions and get help. There's also an identical `CLAUDE.md` and `AGENTS.md` file. If you need help, simply start your favorite AI Agent, and give it this instruction:
+Hay un archivo `gameplan.md` en la raíz del proyecto que describe todo el proyecto Alex a un Agente de IA, para que puedas hacer preguntas y recibir ayuda. También hay un archivo idéntico llamado `CLAUDE.md` y otro llamado `AGENTS.md`. Si necesitas ayuda, simplemente inicia tu Agente de IA favorito y dale esta instrucción:
 
-> I am a student on the course AI in Production. We are in the course repo. Read the file `gameplan.md` for a briefing on the project. Read this file completely and read all the linked guides carefully. Do not start any work apart from reading and checking directory structure. When you have completed all reading, let me know if you have questions before we get started.
+> Soy estudiante del curso AI in Production. Estamos en el repositorio del curso. Lee el archivo `gameplan.md` para obtener una visión general del proyecto. Lee este archivo por completo y lee cuidadosamente todas las guías enlazadas. No inicies ningún trabajo aparte de leer y revisar la estructura de directorios. Cuando hayas terminado toda la lectura, avísame si tienes dudas antes de empezar.
 
-After answering questions, say exactly which guide you're on and any issues. Be careful to validate every suggestion; always ask for the root cause and evidence of problems. LLMs have a tendency to jump to conclusions, but they often correct themselves when they need to provide evidence.
+Después de responder preguntas, indica exactamente en qué guía estás y cualquier problema. Ten cuidado de validar cada sugerencia; siempre pide la causa raíz y evidencia de problemas. Los LLMs tienden a sacar conclusiones apresuradas, pero a menudo se corrigen cuando necesitan aportar evidencia.
 
-## About S3 Vectors
+## Acerca de S3 Vectors
 
-S3 Vectors is AWS's native vector storage solution, offering 90% cost savings compared to traditional vector databases. It uses a separate namespace (`s3vectors`) from regular S3.
+S3 Vectors es la solución nativa de AWS para almacenamiento vectorial, ofreciendo un ahorro del 90% comparado con bases de datos vectoriales tradicionales. Utiliza un espacio de nombres separado (`s3vectors`) del S3 regular.
 
-## Step 1: Create S3 Vector Bucket
+## Paso 1: Crear un Bucket Vectorial en S3
 
-Since S3 Vectors uses a different namespace than regular S3, we'll create it via the AWS Console:
+Ya que S3 Vectors usa un espacio de nombres diferente al S3 regular, lo crearemos desde la Consola de AWS:
 
-1. Go to the [S3 Console](https://console.aws.amazon.com/s3/)
-2. Look for **"Vector buckets"** in the left navigation (not regular buckets)
-3. Click **"Create vector bucket"**
-4. Configure:
-   - Bucket name: `alex-vectors-{your-account-id}` (replace with your actual account ID)
-   - Encryption: Keep default (SSE-S3)
-5. After creating the bucket, create an index:
-   - Index name: `financial-research`
-   - Dimension: `384`
-   - Distance metric: `Cosine`
-6. Click **"Create vector index"**
+1. Accede a la [Consola de S3](https://console.aws.amazon.com/s3/)
+2. Busca **"Vector buckets"** en la navegación izquierda (no los buckets normales)
+3. Haz clic en **"Create vector bucket"**
+4. Configura:
+   - Nombre del bucket: `alex-vectors-{your-account-id}` (reemplaza con tu ID real de cuenta)
+   - Encriptación: Deja la predeterminada (SSE-S3)
+5. Después de crear el bucket, crea un índice:
+   - Nombre del índice: `financial-research`
+   - Dimensión: `384`
+   - Métrica de distancia: `Cosine`
+6. Haz clic en **"Create vector index"**
 
-## Step 2: Prepare the Lambda Deployment Package
+## Paso 2: Preparar el Paquete de Despliegue de Lambda
 
-The Lambda function code is already in the repository:
+El código de la función Lambda ya está en el repositorio:
 
 ```bash
-# Navigate to the ingest directory
+# Navega al directorio de ingest
 cd backend/ingest
 
-# Install dependencies and create deployment package
+# Instala las dependencias y crea el paquete de despliegue
 uv run package.py
 ```
 
-This creates `lambda_function.zip` containing your function and all dependencies. You should see:
+Esto crea `lambda_function.zip` que contiene tu función y todas las dependencias. Deberías ver:
 ```
 ✅ Deployment package created: lambda_function.zip
    Size: ~15 MB
 ```
 
-## Step 3: Configure and Deploy the Infrastructure
+## Paso 3: Configura y Despliega la Infraestructura
 
-First, set up the Terraform variables:
+Primero, configura las variables de Terraform:
 
 ```bash
-# Navigate to the ingestion terraform directory
+# Navega al directorio de terraform de ingesta
 cd ../../terraform/3_ingestion
 
-# Copy the example variables file
+# Copia el archivo de variables de ejemplo
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and set your values:
+Edita `terraform.tfvars` y coloca tus valores:
 ```hcl
-aws_region = "us-east-1"  # Use your DEFAULT_AWS_REGION from .env
-sagemaker_endpoint_name = "alex-embedding-endpoint"  # From Part 2
+aws_region = "us-east-1"  # Usa tu DEFAULT_AWS_REGION de .env
+sagemaker_endpoint_name = "alex-embedding-endpoint"  # De la Parte 2
 ```
 
-Now deploy the infrastructure:
+Ahora despliega la infraestructura:
 
 ```bash
-# Initialize Terraform (creates local state file)
+# Inicializa Terraform (crea el archivo de estado local)
 terraform init
 
-# Deploy the infrastructure
+# Despliega la infraestructura
 terraform apply
 ```
 
-Type `yes` when prompted. The deployment takes 2-3 minutes.
+Escribe `yes` cuando se te solicite. El despliegue toma 2-3 minutos.
 
-Note: The Lambda function expects the deployment package to exist at `../../backend/ingest/lambda_function.zip` (which you created in Step 2).
+Nota: La función Lambda espera que el paquete de despliegue exista en `../../backend/ingest/lambda_function.zip` (el que creaste en el Paso 2).
 
-## Step 4: Save Your Configuration
+## Paso 4: Guarda tu Configuración
 
-After deployment, Terraform will display important outputs. You need to save these values to your `.env` file.
+Después del despliegue, Terraform mostrará salidas importantes. Debes guardar estos valores en tu archivo `.env`.
 
-### Get Your API Key
+### Obtener tu API Key
 
-First, get your API key using the command shown in Terraform output:
+Primero, obtén tu API key usando el comando mostrado en la salida de Terraform:
 ```bash
-# Replace the ID with the one from your Terraform output
+# Reemplaza el ID por el de tu salida de Terraform
 aws apigateway get-api-key --api-key YOUR_API_KEY_ID --include-value --query 'value' --output text
 ```
 
-### Update Your .env File
+### Actualiza tu Archivo .env
 
-Navigate back to project root and update your `.env`:
+Vuelve a la raíz del proyecto y actualiza tu `.env`:
 ```bash
 cd ../..
 
-nano .env  # or use your preferred editor
+nano .env  # o utiliza tu editor preferido
 ```
 
-Add or update these lines in your `.env` file:
+Agrega o actualiza estas líneas en tu archivo `.env`:
 ```
 # From Part 3 - get these values from Terraform output
 VECTOR_BUCKET=alex-vectors-YOUR_ACCOUNT_ID
@@ -120,55 +120,55 @@ ALEX_API_ENDPOINT=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/prod/in
 ALEX_API_KEY=your-api-key-here
 ```
 
-💡 **Tip**: You can view Terraform outputs anytime:
+💡 **Consejo**: Puedes ver las salidas de Terraform en cualquier momento:
 ```bash
 cd terraform/3_ingestion
 terraform output
 ```
 
-## Step 5: Test the Setup
+## Paso 5: Prueba la Configuración
 
-Test document ingestion directly via S3 Vectors:
+Prueba la ingestión de documentos directamente vía S3 Vectors:
 
 ```bash
 cd backend/ingest
 uv run test_ingest_s3vectors.py
 ```
 
-You should see:
+Deberías ver:
 ```
 ✓ Success! Document ID: [uuid]
 Testing complete!
 ```
 
-## Step 6: Test Search
+## Paso 6: Prueba la Búsqueda
 
-Now test that you can search the documents:
+Ahora prueba que puedes buscar los documentos:
 
 ```bash
 uv run test_search_s3vectors.py
 ```
 
-You should see the three documents (Tesla, Amazon, NVIDIA) that were just ingested, and example semantic searches showing how S3 Vectors finds related content.
+Deberías ver los tres documentos (Tesla, Amazon, NVIDIA) que acabas de ingresar, y ejemplos de búsquedas semánticas mostrando cómo S3 Vectors encuentra contenido relacionado.
 
-### Optional: Test via API Gateway
+### Opcional: Prueba mediante API Gateway
 
-You can also test the API Gateway endpoint directly:
+También puedes probar el endpoint de API Gateway directamente:
 
 ```bash
-# Get your API key from .env or Terraform output
+# Obtén tu API key desde .env o la salida de Terraform
 curl -X POST $ALEX_API_ENDPOINT \
   -H "x-api-key: $ALEX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"text": "Test document via API", "metadata": {"source": "api_test"}}'
 ```
 
-You should see:
+Deberías ver:
 ```json
 {"message": "Document indexed successfully", "document_id": "..."}
 ```
 
-## Architecture Overview
+## Resumen de la Arquitectura
 
 ```mermaid
 graph LR
@@ -181,53 +181,53 @@ graph LR
     style E fill:#90EE90,stroke:#228B22,stroke-width:3px
 ```
 
-## Cost Comparison
+## Comparativa de Costes
 
-| Service | Monthly Cost (Estimate) |
-|---------|------------------------|
+| Servicio | Costo Mensual (Estimado) |
+|----------|-------------------------|
 | OpenSearch Serverless | ~$200-300 |
 | S3 Vectors | ~$20-30 |
-| **Savings** | **90%!** |
+| **Ahorro** | **¡90%!** |
 
-## Troubleshooting
+## Resolución de Problemas
 
 ### "Vector bucket not found"
-- Ensure you created the bucket with vector configuration enabled
-- Check the bucket name matches exactly
+- Asegúrate de haber creado el bucket con la configuración vectorial habilitada
+- Revisa que el nombre del bucket coincida exactamente
 
-### "AccessDenied" errors
-- Make sure your IAM user has S3 and S3 Vectors permissions
-- The Lambda role needs `s3vectors:*` permissions
+### Errores "AccessDenied"
+- Asegúrate de que tu usuario IAM tiene permisos para S3 y S3 Vectors
+- El rol de Lambda necesita permisos `s3vectors:*`
 
-### S3 Vectors Command Not Found
-- Ensure you have the latest AWS CLI version
-- The `s3vectors` commands use a separate namespace from regular S3
+### Comando de S3 Vectors No Encontrado
+- Asegúrate de tener la última versión de AWS CLI
+- Los comandos `s3vectors` usan un espacio de nombres separado del S3 regular
 
-### Lambda Handler Errors (500 Internal Server Error)
-- Check CloudWatch logs: `aws logs tail /aws/lambda/alex-ingest`
-- Verify environment variables are set correctly (SAGEMAKER_ENDPOINT, VECTOR_BUCKET)
-- Ensure Lambda IAM role has `s3vectors:PutVectors` permission
-- Lambda handler must be `ingest_s3vectors.lambda_handler`
+### Errores del Handler de Lambda (500 Internal Server Error)
+- Revisa los logs de CloudWatch: `aws logs tail /aws/lambda/alex-ingest`
+- Verifica que las variables de entorno estén correctamente configuradas (SAGEMAKER_ENDPOINT, VECTOR_BUCKET)
+- Asegúrate de que el rol de Lambda tenga permiso `s3vectors:PutVectors`
+- El handler de Lambda debe ser `ingest_s3vectors.lambda_handler`
 
-## What's Next?
+## ¿Qué Sigue?
 
-Congratulations! You now have a cost-effective vector storage solution. The infrastructure includes:
-- ✅ S3 bucket with vector capabilities
-- ✅ Lambda function for ingesting documents with embeddings
-- ✅ API Gateway with secure API key authentication
-- ✅ 90% cost savings compared to OpenSearch!
+¡Felicidades! Ahora tienes una solución de almacenamiento vectorial rentable. La infraestructura incluye:
+- ✅ Bucket S3 con capacidades vectoriales
+- ✅ Función Lambda para ingresar documentos con embeddings
+- ✅ API Gateway con autenticación segura vía API key
+- ✅ ¡Ahorro del 90% comparado con OpenSearch!
 
-**Important**: Save the Terraform outputs - you'll need them for the next guide.
+**Importante**: Guarda las salidas de Terraform, las necesitarás para la siguiente guía.
 
-In [Guide 4](4_researcher.md), we'll deploy the Alex Researcher Agent that uses this infrastructure to provide intelligent investment insights.
+En la [Guía 4](4_researcher.md), desplegaremos el Agente Investigador de Alex que usará esta infraestructura para proporcionar insights inteligentes de inversión.
 
-## Clean Up (Optional)
+## Limpieza (Opcional)
 
-If you want to destroy the infrastructure to avoid costs:
+Si deseas destruir la infraestructura para evitar costes:
 
 ```bash
-# From the terraform directory
+# Desde el directorio de terraform
 terraform destroy
 ```
 
-**Note**: This will destroy ALL resources including your SageMaker endpoint. Only do this if you're completely done with the project.
+**Nota**: Esto destruirá TODOS los recursos incluyendo tu endpoint de SageMaker. Hazlo solamente si has terminado por completo el proyecto.

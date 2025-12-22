@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Deploy the Alex Financial Advisor Part 7 infrastructure.
-This script:
-1. Packages the Lambda function
-2. Deploys infrastructure with Terraform to get API URL
-3. Builds the NextJS frontend with production API URL
-4. Uploads frontend files to S3
-5. Invalidates CloudFront cache
+Despliega la infraestructura de Alex Financial Advisor Parte 7.
+Este script:
+1. Empaqueta la función Lambda
+2. Despliega la infraestructura con Terraform para obtener la URL de la API
+3. Construye el frontend de NextJS con la URL de la API de producción
+4. Sube los archivos del frontend a S3
+5. Invalida la caché de CloudFront
 
-NOTE: This script uses .env.production for deployment and does NOT modify .env.local
+NOTA: Este script utiliza .env.production para el despliegue y NO modifica .env.local
 """
 
 import subprocess
@@ -20,8 +20,8 @@ from pathlib import Path
 
 
 def run_command(cmd, cwd=None, check=True, capture_output=False, env=None):
-    """Run a command and optionally capture output."""
-    print(f"Running: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+    """Ejecuta un comando y opcionalmente captura su salida."""
+    print(f"Ejecutando: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
 
     if capture_output:
         result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=isinstance(cmd, str), env=env)
@@ -37,93 +37,93 @@ def run_command(cmd, cwd=None, check=True, capture_output=False, env=None):
 
 
 def check_prerequisites():
-    """Check that all required tools are installed."""
-    print("🔍 Checking prerequisites...")
+    """Verifica que todas las herramientas requeridas estén instaladas."""
+    print("🔍 Verificando prerequisitos...")
 
-    # Check for required tools
+    # Verifica las herramientas requeridas
     tools = {
-        "docker": "Docker is required for Lambda packaging",
-        "terraform": "Terraform is required for infrastructure deployment",
-        "npm": "npm is required for building the frontend",
-        "aws": "AWS CLI is required for S3 sync and CloudFront invalidation"
+        "docker": "Docker es requerido para el empaquetado de Lambda",
+        "terraform": "Terraform es requerido para el despliegue de infraestructura",
+        "npm": "npm es requerido para construir el frontend",
+        "aws": "AWS CLI es requerido para la sincronización con S3 y la invalidación de CloudFront"
     }
 
     for tool, message in tools.items():
         try:
             run_command([tool, "--version"], capture_output=True)
-            print(f"  ✅ {tool} is installed")
+            print(f"  ✅ {tool} está instalado")
         except (subprocess.CalledProcessError, FileNotFoundError):
             print(f"  ❌ {message}")
             sys.exit(1)
 
-    # Check if Docker is running
+    # Verifica si Docker está corriendo
     try:
         run_command(["docker", "info"], capture_output=True)
-        print("  ✅ Docker is running")
+        print("  ✅ Docker está corriendo")
     except subprocess.CalledProcessError:
-        print("  ❌ Docker is not running. Please start Docker Desktop.")
+        print("  ❌ Docker no está corriendo. Por favor inicia Docker Desktop.")
         sys.exit(1)
 
-    # Check AWS credentials
+    # Verifica credenciales de AWS
     try:
         run_command(["aws", "sts", "get-caller-identity"], capture_output=True)
-        print("  ✅ AWS credentials configured")
+        print("  ✅ Credenciales de AWS configuradas")
     except subprocess.CalledProcessError:
-        print("  ❌ AWS credentials not configured. Run 'aws configure'")
+        print("  ❌ Credenciales de AWS no configuradas. Ejecuta 'aws configure'")
         sys.exit(1)
 
 
 def package_lambda():
-    """Package the Lambda function using Docker."""
-    print("\n📦 Packaging Lambda function...")
+    """Empaqueta la función Lambda usando Docker."""
+    print("\n📦 Empaquetando función Lambda...")
 
     api_dir = Path(__file__).parent.parent / "backend" / "api"
 
     if not api_dir.exists():
-        print(f"  ❌ API directory not found: {api_dir}")
+        print(f"  ❌ Directorio de API no encontrado: {api_dir}")
         sys.exit(1)
 
-    # Run the packaging script
+    # Ejecuta el script de empaquetado
     run_command(["uv", "run", "package_docker.py"], cwd=api_dir)
 
-    # Verify the package was created
+    # Verifica si se creó el paquete
     lambda_zip = api_dir / "api_lambda.zip"
     if not lambda_zip.exists():
-        print(f"  ❌ Lambda package not created: {lambda_zip}")
+        print(f"  ❌ Paquete Lambda no creado: {lambda_zip}")
         sys.exit(1)
 
     size_mb = lambda_zip.stat().st_size / (1024 * 1024)
-    print(f"  ✅ Lambda package created: {lambda_zip} ({size_mb:.2f} MB)")
+    print(f"  ✅ Paquete Lambda creado: {lambda_zip} ({size_mb:.2f} MB)")
 
 
 def build_frontend(api_url=None):
-    """Build the NextJS frontend."""
-    print("\n🎨 Building frontend...")
+    """Construye el frontend de NextJS."""
+    print("\n🎨 Construyendo el frontend...")
 
     frontend_dir = Path(__file__).parent.parent / "frontend"
 
     if not frontend_dir.exists():
-        print(f"  ❌ Frontend directory not found: {frontend_dir}")
+        print(f"  ❌ Directorio del frontend no encontrado: {frontend_dir}")
         sys.exit(1)
 
-    # Install dependencies if needed
+    # Instala dependencias si es necesario
     node_modules = frontend_dir / "node_modules"
     if not node_modules.exists():
-        print("  Installing dependencies...")
+        print("  Instalando dependencias...")
         run_command(["npm", "install"], cwd=frontend_dir)
 
-    # If API URL is provided, create .env.production.local to override .env.local
+    # Si se proporciona la URL de la API, crea .env.production.local para sobrescribir .env.local
     if api_url:
-        print(f"  Creating .env.production.local with API URL: {api_url}")
+        print(f"  Creando .env.production.local con la URL de la API: {api_url}")
         env_prod_local = frontend_dir / ".env.production.local"
 
-        # Copy from .env.production as base
+        # Copia desde .env.production como base
         env_prod = frontend_dir / ".env.production"
         if env_prod.exists():
             with open(env_prod, "r") as f:
                 lines = f.readlines()
         else:
-            # Fallback to .env.local if .env.production doesn't exist
+            # Como alternativa usa .env.local si no existe .env.production
             env_local = frontend_dir / ".env.local"
             if env_local.exists():
                 with open(env_local, "r") as f:
@@ -131,7 +131,7 @@ def build_frontend(api_url=None):
             else:
                 lines = []
 
-        # Update the API URL
+        # Actualiza la URL de la API
         api_line_found = False
         for i, line in enumerate(lines):
             if line.startswith("NEXT_PUBLIC_API_URL="):
@@ -142,54 +142,54 @@ def build_frontend(api_url=None):
         if not api_line_found:
             lines.append(f"\nNEXT_PUBLIC_API_URL={api_url}\n")
 
-        # Write to .env.production.local (highest priority for production builds)
+        # Escribe en .env.production.local (máxima prioridad para builds de producción)
         with open(env_prod_local, "w") as f:
             f.writelines(lines)
-        print("  ✅ Created .env.production.local with API URL")
+        print("  ✅ .env.production.local creado con la URL de la API")
 
-    # Build the frontend - NextJS will automatically use .env.production for production builds
-    print("  Building NextJS app for production...")
-    # Set NODE_ENV to production to ensure .env.production is used
+    # Construye el frontend - NextJS usará automáticamente .env.production en builds de producción
+    print("  Construyendo la app NextJS para producción...")
+    # Establece NODE_ENV en producción para asegurar el uso de .env.production
     build_env = os.environ.copy()
     build_env["NODE_ENV"] = "production"
     run_command(["npm", "run", "build"], cwd=frontend_dir, env=build_env)
 
-    # Verify the build
+    # Verifica el build
     out_dir = frontend_dir / "out"
     if not out_dir.exists():
-        print(f"  ❌ Build output not found: {out_dir}")
-        print("  Make sure next.config.ts has output: 'export'")
+        print(f"  ❌ No se encontró la salida del build: {out_dir}")
+        print("  Asegúrate de que next.config.ts tenga output: 'export'")
         sys.exit(1)
 
-    print(f"  ✅ Frontend built successfully")
+    print(f"  ✅ Frontend construido exitosamente")
 
 
 def deploy_terraform():
-    """Deploy infrastructure with Terraform."""
-    print("\n🏗️  Deploying infrastructure with Terraform...")
+    """Despliega infraestructura con Terraform."""
+    print("\n🏗️  Desplegando infraestructura con Terraform...")
 
     terraform_dir = Path(__file__).parent.parent / "terraform" / "7_frontend"
 
     if not terraform_dir.exists():
-        print(f"  ❌ Terraform directory not found: {terraform_dir}")
+        print(f"  ❌ Directorio de Terraform no encontrado: {terraform_dir}")
         sys.exit(1)
 
-    # Initialize Terraform if needed
+    # Inicializa Terraform si es necesario
     if not (terraform_dir / ".terraform").exists():
-        print("  Initializing Terraform...")
+        print("  Inicializando Terraform...")
         run_command(["terraform", "init"], cwd=terraform_dir)
 
-    # Plan the deployment
-    print("  Planning deployment...")
+    # Planea el despliegue
+    print("  Planeando el despliegue...")
     run_command(["terraform", "plan"], cwd=terraform_dir)
 
-    # Apply the deployment
-    print("\n  Applying deployment...")
-    print("  Creating AWS resources...")
+    # Aplica el despliegue
+    print("\n  Aplicando el despliegue...")
+    print("  Creando recursos AWS...")
     run_command(["terraform", "apply", "-auto-approve"], cwd=terraform_dir)
 
-    # Get outputs
-    print("\n  Getting outputs...")
+    # Obtén los outputs
+    print("\n  Obteniendo salidas...")
     outputs = run_command(
         ["terraform", "output", "-json"],
         cwd=terraform_dir,
@@ -200,25 +200,25 @@ def deploy_terraform():
 
 
 def upload_frontend(bucket_name, cloudfront_id):
-    """Upload frontend files to S3."""
-    print(f"\n📤 Uploading frontend to S3 bucket: {bucket_name}")
+    """Sube los archivos del frontend a S3."""
+    print(f"\n📤 Subiendo frontend al bucket S3: {bucket_name}")
 
     frontend_dir = Path(__file__).parent.parent / "frontend" / "out"
 
     if not frontend_dir.exists():
-        print(f"  ❌ Frontend build not found: {frontend_dir}")
+        print(f"  ❌ Build del frontend no encontrado: {frontend_dir}")
         sys.exit(1)
 
-    # First, clear the bucket
-    print("  Clearing S3 bucket...")
+    # Primero, limpia el bucket
+    print("  Limpiando el bucket S3...")
     run_command([
         "aws", "s3", "rm",
         f"s3://{bucket_name}/",
         "--recursive"
     ])
 
-    # Upload HTML files with correct content type and no-cache
-    print("  Uploading HTML files...")
+    # Sube archivos HTML con el tipo de contenido correcto y sin caché
+    print("  Subiendo archivos HTML...")
     run_command([
         "aws", "s3", "cp",
         str(frontend_dir) + "/",
@@ -230,8 +230,8 @@ def upload_frontend(bucket_name, cloudfront_id):
         "--cache-control", "max-age=0,no-cache,no-store,must-revalidate"
     ])
 
-    # Upload CSS files
-    print("  Uploading CSS files...")
+    # Sube archivos CSS
+    print("  Subiendo archivos CSS...")
     run_command([
         "aws", "s3", "cp",
         str(frontend_dir) + "/",
@@ -243,8 +243,8 @@ def upload_frontend(bucket_name, cloudfront_id):
         "--cache-control", "max-age=31536000,public"
     ])
 
-    # Upload JS files
-    print("  Uploading JavaScript files...")
+    # Sube archivos JS
+    print("  Subiendo archivos JavaScript...")
     run_command([
         "aws", "s3", "cp",
         str(frontend_dir) + "/",
@@ -256,8 +256,8 @@ def upload_frontend(bucket_name, cloudfront_id):
         "--cache-control", "max-age=31536000,public"
     ])
 
-    # Upload JSON files
-    print("  Uploading JSON files...")
+    # Sube archivos JSON
+    print("  Subiendo archivos JSON...")
     run_command([
         "aws", "s3", "cp",
         str(frontend_dir) + "/",
@@ -269,7 +269,7 @@ def upload_frontend(bucket_name, cloudfront_id):
         "--cache-control", "max-age=31536000,public"
     ])
 
-    # Upload images
+    # Sube imágenes
     for ext, content_type in [
         ("*.png", "image/png"),
         ("*.jpg", "image/jpeg"),
@@ -289,8 +289,8 @@ def upload_frontend(bucket_name, cloudfront_id):
             "--cache-control", "max-age=31536000,public"
         ])
 
-    # Upload any remaining files with generic content type
-    print("  Uploading remaining files...")
+    # Sube cualquier archivo restante con tipo de contenido genérico
+    print("  Subiendo archivos restantes...")
     run_command([
         "aws", "s3", "sync",
         str(frontend_dir) + "/",
@@ -298,57 +298,57 @@ def upload_frontend(bucket_name, cloudfront_id):
         "--cache-control", "max-age=31536000,public"
     ])
 
-    print(f"  ✅ Frontend uploaded successfully")
+    print(f"  ✅ Frontend subido exitosamente")
 
-    # Invalidate CloudFront cache
-    print(f"\n🔄 Invalidating CloudFront cache...")
+    # Invalida la caché de CloudFront
+    print(f"\n🔄 Invalidando caché de CloudFront...")
     result = run_command([
         "aws", "cloudfront", "create-invalidation",
         "--distribution-id", cloudfront_id,
         "--paths", "/*"
     ], capture_output=True)
 
-    print(f"  ✅ CloudFront invalidation created")
+    print(f"  ✅ Invalidación de CloudFront creada")
 
 
 def display_deployment_info(outputs):
-    """Display deployment information without modifying local env files."""
-    print("\n📝 Deployment Information")
+    """Muestra información del despliegue sin modificar archivos env locales."""
+    print("\n📝 Información del Despliegue")
 
-    # Extract values from outputs
+    # Extrae valores de outputs
     api_url = outputs["api_gateway_url"]["value"]
     cloudfront_url = outputs["cloudfront_url"]["value"]
 
-    print(f"\n  ✅ Deployment successful!")
-    print(f"\n  CloudFront URL: {cloudfront_url}")
-    print(f"  API Gateway URL: {api_url}")
-    print(f"\n  Note: Your local .env.local file remains unchanged.")
-    print(f"  The production build uses .env.production with the AWS API URL.")
+    print(f"\n  ✅ ¡Despliegue exitoso!")
+    print(f"\n  URL de CloudFront: {cloudfront_url}")
+    print(f"  URL de API Gateway: {api_url}")
+    print(f"\n  Nota: Tu archivo local .env.local permanece sin cambios.")
+    print(f"  El build de producción utiliza .env.production con la URL de la API de AWS.")
 
 
 def main():
-    """Main deployment function."""
-    print("🚀 Alex Financial Advisor - Part 7 Deployment")
+    """Función principal de despliegue."""
+    print("🚀 Despliegue de Alex Financial Advisor - Parte 7")
     print("=" * 50)
 
-    # Check prerequisites
+    # Verifica prerequisitos
     check_prerequisites()
 
-    # Package Lambda
+    # Empaqueta Lambda
     package_lambda()
 
-    # Deploy infrastructure first to get the API URL
+    # Despliega infraestructura primero para obtener la URL de la API
     outputs = deploy_terraform()
 
-    # Get the API URL from terraform outputs
+    # Obtiene la URL de la API de los outputs de terraform
     api_url = outputs["api_gateway_url"]["value"]
 
-    # Build frontend with the production API URL
+    # Construye el frontend con la URL de la API de producción
     build_frontend(api_url)
 
-    # Extract CloudFront distribution ID
+    # Extrae el ID de distribución de CloudFront
     cloudfront_url = outputs["cloudfront_url"]["value"]
-    # Extract distribution ID from CloudFront URL
+    # Extrae el ID de distribución desde la URL de CloudFront
     dist_id_output = run_command([
         "aws", "cloudfront", "list-distributions",
         "--query", f"DistributionList.Items[?DomainName=='{cloudfront_url.replace('https://', '')}'].Id",
@@ -356,18 +356,18 @@ def main():
     ], capture_output=True)
 
     if not dist_id_output:
-        print("  ⚠️  Could not find CloudFront distribution ID")
-        print("  You'll need to manually invalidate the cache")
+        print("  ⚠️  No se pudo encontrar el ID de la distribución de CloudFront")
+        print("  Deberás invalidar la caché manualmente")
         cloudfront_id = None
     else:
         cloudfront_id = dist_id_output
 
-    # Upload frontend
+    # Sube el frontend
     bucket_name = outputs["s3_bucket_name"]["value"]
     if cloudfront_id:
         upload_frontend(bucket_name, cloudfront_id)
     else:
-        print("\n📤 Uploading frontend to S3...")
+        print("\n📤 Subiendo frontend a S3...")
         run_command([
             "aws", "s3", "sync",
             str(Path(__file__).parent.parent / "frontend" / "out") + "/",
@@ -375,16 +375,16 @@ def main():
             "--delete"
         ])
 
-    # Display deployment info (no longer modifies .env.local)
+    # Muestra info del despliegue (ya no modifica .env.local)
     display_deployment_info(outputs)
 
     print("\n" + "=" * 50)
-    print("✅ Deployment complete!")
-    print(f"\n🌐 Your application is available at:")
+    print("✅ ¡Despliegue completado!")
+    print(f"\n🌐 Tu aplicación está disponible en:")
     print(f"   {outputs['cloudfront_url']['value']}")
-    print(f"\n📊 Monitor your Lambda function at:")
+    print(f"\n📊 Monitorea tu función Lambda en:")
     print(f"   AWS Console > Lambda > {outputs['lambda_function_name']['value']}")
-    print("\n⏳ Note: CloudFront distribution may take 5-10 minutes to fully propagate")
+    print("\n⏳ Nota: La distribución de CloudFront puede tardar 5-10 minutos en propagarse completamente")
 
 
 if __name__ == "__main__":

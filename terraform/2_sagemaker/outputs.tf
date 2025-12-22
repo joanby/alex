@@ -1,20 +1,20 @@
 
 output "sagemaker_endpoint_name" {
-  description = "Name of the SageMaker endpoint"
+  description = "Nombre del endpoint de SageMaker"
   value       = aws_sagemaker_endpoint.embedding_endpoint.name
 }
 
 output "sagemaker_endpoint_arn" {
-  description = "ARN of the SageMaker endpoint"
+  description = "ARN del endpoint de SageMaker"
   value       = aws_sagemaker_endpoint.embedding_endpoint.arn
 }
 
 output "setup_instructions" {
-  description = "Instructions for setting up environment variables"
+  description = "Instrucciones para configurar las variables de entorno"
   value = <<-EOT
     
-    ✅ SageMaker endpoint deployed successfully!
+    ✅ ¡Endpoint de SageMaker desplegado con éxito!
     
-    Follow the instructions in the guide to update your .env file and test the endpoint.
+    Sigue las instrucciones de la guía para actualizar tu archivo .env y probar el endpoint.
   EOT
 }
