@@ -1,32 +1,32 @@
-FROM --platform=linux/amd64 python:3.12-slim
+FROM --platform=linux/amd64 python:3.13-slim
 
 WORKDIR /app
 
-# Install Node.js
+# Instalar Node.js
 RUN apt-get update && apt-get install -y \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright dependencies (system-level dependencies for Chromium)
+# Instalar dependencias de Playwright (dependencias de sistema para Chromium)
 RUN npx -y playwright install --with-deps chromium
 
-# Install Python package manager
+# Instalar el gestor de paquetes de Python
 RUN pip install uv
 
-# Copy project files
+# Copiar archivos del proyecto
 COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies during build
-# uv will automatically install packages for the container's architecture (linux/amd64)
+# Instalar dependencias de Python durante el build
+# uv instalará automáticamente los paquetes para la arquitectura del contenedor (linux/amd64)
 RUN uv sync --frozen --no-install-project
 
-# Copy application code
+# Copiar el código de la aplicación
 COPY *.py ./
 
-# Expose port
+# Exponer el puerto
 EXPOSE 8000
 
-# Run the application (dependencies already installed)
+# Ejecutar la aplicación (las dependencias ya están instaladas)
 CMD ["uv", "run", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

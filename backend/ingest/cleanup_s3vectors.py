@@ -1,6 +1,6 @@
 """
-Clean up S3 Vectors database by removing all test data.
-This script directly accesses S3 Vectors without going through API Gateway.
+Limpia la base de datos de vectores S3 eliminando todos los datos de prueba.
+Este script accede directamente a S3 Vectors sin pasar por API Gateway.
 """
 
 import os
@@ -9,35 +9,35 @@ import boto3
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load environment variables from project root
+# Cargar variables de entorno desde la raíz del proyecto
 env_path = Path(__file__).parent.parent.parent / '.env'
 load_dotenv(env_path, override=True)
 
-# Get configuration
+# Obtener configuración
 VECTOR_BUCKET = os.getenv('VECTOR_BUCKET')
 INDEX_NAME = 'financial-research'
 
 if not VECTOR_BUCKET:
-    print("Error: VECTOR_BUCKET not found in .env")
+    print("Error: VECTOR_BUCKET no encontrado en .env")
     exit(1)
 
-# Initialize S3 Vectors client
+# Inicializar cliente de S3 Vectors
 s3_vectors = boto3.client('s3vectors')
 
 def delete_all_vectors():
-    """Delete all vectors from the index."""
-    print("Cleaning S3 Vectors database...")
+    """Elimina todos los vectores del índice."""
+    print("Limpiando la base de datos de S3 Vectors...")
     print(f"Bucket: {VECTOR_BUCKET}")
-    print(f"Index: {INDEX_NAME}")
+    print(f"Índice: {INDEX_NAME}")
     print()
     
     deleted_count = 0
     
     try:
-        # S3 Vectors doesn't have a list operation, so we need to search broadly
-        print("Searching for vectors to delete...")
+        # S3 Vectors no tiene una operación de lista, así que hay que buscar ampliamente
+        print("Buscando vectores para eliminar...")
         
-        # Get a real embedding for a generic search term
+        # Conseguir un embedding real para un término de búsqueda genérico
         sagemaker_runtime = boto3.client('sagemaker-runtime')
         SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'alex-embedding-endpoint')
         
@@ -48,10 +48,10 @@ def delete_all_vectors():
         )
         
         result = json.loads(response['Body'].read().decode())
-        # Extract from nested array [[[embedding]]]
+        # Extraer del array anidado [[[embedding]]]
         dummy_vector = result[0][0]
         
-        # S3 Vectors limits topK to 30, so we need to loop
+        # S3 Vectors limita topK a 30, así que hay que iterar
         all_vectors = []
         batch_size = 30
         
@@ -70,8 +70,8 @@ def delete_all_vectors():
                 
             all_vectors.extend(vectors)
             
-            # Delete this batch before getting more
-            print(f"  Found batch of {len(vectors)} vectors...")
+            # Eliminar este lote antes de obtener más
+            print(f"  Lote encontrado de {len(vectors)} vectores...")
             for vector in vectors:
                 try:
                     s3_vectors.delete_vectors(
@@ -81,39 +81,39 @@ def delete_all_vectors():
                     )
                     deleted_count += 1
                 except Exception as e:
-                    print(f"  Error deleting {vector['key']}: {e}")
+                    print(f"  Error eliminando {vector['key']}: {e}")
             
-            # If we got less than batch_size, we're done
+            # Si recibimos menos de batch_size, hemos terminado
             if len(vectors) < batch_size:
                 break
         
         if deleted_count > 0:
-            print(f"\n✅ Successfully deleted {deleted_count} vectors")
+            print(f"\n✅ Se eliminaron correctamente {deleted_count} vectores")
         else:
-            print("✅ No vectors found - database is already empty")
+            print("✅ No se encontraron vectores - la base de datos ya está vacía")
             
     except Exception as e:
-        print(f"❌ Error during cleanup: {e}")
+        print(f"❌ Error durante la limpieza: {e}")
         if deleted_count > 0:
-            print(f"   (Partially successful - deleted {deleted_count} vectors)")
+            print(f"   (Parcialmente exitoso - se eliminaron {deleted_count} vectores)")
 
 def main():
-    """Clean up the S3 Vectors database."""
+    """Limpia la base de datos de vectores S3."""
     print("=" * 60)
-    print("S3 Vectors Database Cleanup")
+    print("Limpieza de la base de datos de S3 Vectors")
     print("=" * 60)
     print()
     
-    # Confirm before deleting
-    response = input("⚠️  This will DELETE ALL vectors. Continue? (yes/no): ")
+    # Confirmar antes de eliminar
+    response = input("⚠️  Esto ELIMINARÁ TODOS los vectores. ¿Continuar? (yes/no): ")
     if response.lower() != 'yes':
-        print("Cleanup cancelled.")
+        print("Limpieza cancelada.")
         return
     
     print()
     delete_all_vectors()
     
-    print("\n💡 Tip: Run test_api.py to add new test data")
+    print("\n💡 Consejo: Ejecuta test_api.py para añadir nuevos datos de prueba")
 
 if __name__ == "__main__":
     main()

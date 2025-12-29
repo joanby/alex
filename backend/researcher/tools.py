@@ -1,5 +1,5 @@
 """
-Tools for the Alex Researcher agent
+Herramientas para el agente Alex Researcher
 """
 import os
 from typing import Dict, Any
@@ -8,13 +8,13 @@ import httpx
 from agents import function_tool
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-# Configuration from environment
+# Configuración desde el entorno
 ALEX_API_ENDPOINT = os.getenv("ALEX_API_ENDPOINT")
 ALEX_API_KEY = os.getenv("ALEX_API_KEY")
 
 
 def _ingest(document: Dict[str, Any]) -> Dict[str, Any]:
-    """Internal function to make the actual API call."""
+    """Función interna para realizar la llamada real a la API."""
     with httpx.Client() as client:
         response = client.post(
             ALEX_API_ENDPOINT,
@@ -31,26 +31,26 @@ def _ingest(document: Dict[str, Any]) -> Dict[str, Any]:
     wait=wait_exponential(multiplier=1, min=1, max=10)
 )
 def ingest_with_retries(document: Dict[str, Any]) -> Dict[str, Any]:
-    """Ingest with retry logic for SageMaker cold starts."""
+    """Ingesta con lógica de reintento para cold starts de SageMaker."""
     return _ingest(document)
 
 
 @function_tool
 def ingest_financial_document(topic: str, analysis: str) -> Dict[str, Any]:
     """
-    Ingest a financial document into the Alex knowledge base.
+    Ingresa un documento financiero en la base de conocimientos de Alex.
     
     Args:
-        topic: The topic or subject of the analysis (e.g., "AAPL Stock Analysis", "Retirement Planning Guide")
-        analysis: Detailed analysis or advice with specific data and insights
+        topic: El tema o asunto del análisis (por ejemplo, "Análisis de acciones de AAPL", "Guía de planificación de jubilación")
+        analysis: Análisis detallado o consejo con datos e insights específicos
     
     Returns:
-        Dictionary with success status and document ID
+        Diccionario con el estado de éxito y el ID del documento
     """
     if not ALEX_API_ENDPOINT or not ALEX_API_KEY:
         return {
             "success": False,
-            "error": "Alex API not configured. Running in local mode."
+            "error": "API de Alex no configurada. Ejecutando en modo local."
         }
     
     document = {
@@ -65,8 +65,8 @@ def ingest_financial_document(topic: str, analysis: str) -> Dict[str, Any]:
         result = ingest_with_retries(document)
         return {
             "success": True,
-            "document_id": result.get("document_id"),  # Changed from documentId
-            "message": f"Successfully ingested analysis for {topic}"
+            "document_id": result.get("document_id"),  # Cambiado de documentId
+            "message": f"Análisis para {topic} ingresado correctamente"
         }
     except Exception as e:
         return {

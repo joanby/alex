@@ -1,37 +1,37 @@
 output "ecr_repository_url" {
-  description = "URL of the ECR repository"
+  description = "URL del repositorio ECR"
   value       = aws_ecr_repository.researcher.repository_url
 }
 
 output "app_runner_service_url" {
-  description = "URL of the App Runner service"
-  value       = try("https://${aws_apprunner_service.researcher.service_url}", "Not created yet - run 'terraform apply' after deploying Docker image")
+  description = "URL del servicio App Runner"
+  value       = try("https://${aws_apprunner_service.researcher.service_url}", "Aún no creado - ejecuta 'terraform apply' después de desplegar la imagen Docker")
 }
 
 output "app_runner_service_id" {
-  description = "ID of the App Runner service"
-  value       = try(aws_apprunner_service.researcher.id, "Not created yet")
+  description = "ID del servicio App Runner"
+  value       = try(aws_apprunner_service.researcher.id, "Aún no creado")
 }
 
 output "scheduler_status" {
-  description = "Status of the automated scheduler"
-  value       = var.scheduler_enabled ? "Enabled - Running every 2 hours" : "Disabled"
+  description = "Estado del programador automático"
+  value       = var.scheduler_enabled ? "Activado - Ejecutándose cada 2 horas" : "Desactivado"
 }
 
 output "setup_instructions" {
-  description = "Instructions for completing setup"
+  description = "Instrucciones para completar la configuración"
   value = <<-EOT
     
-    ✅ Researcher service deployed successfully!
+    ✅ ¡Servicio Researcher desplegado con éxito!
     
-    Service URL: https://${aws_apprunner_service.researcher.service_url}
+    URL del servicio: https://${aws_apprunner_service.researcher.service_url}
     
-    Test the researcher:
+    Prueba el researcher:
     curl https://${aws_apprunner_service.researcher.service_url}/research
     
-    ${var.scheduler_enabled ? "⏰ Automated research is running every 2 hours" : "💡 To enable automated research, set scheduler_enabled = true"}
+    ${var.scheduler_enabled ? "⏰ La investigación automática se ejecuta cada 2 horas" : "💡 Para activar la investigación automática, pon scheduler_enabled = true"}
     
-    Note: You'll need to deploy your actual researcher code to App Runner.
-    Follow the guide for instructions on building and deploying the Docker image.
+    Nota: Debes desplegar tu código real de researcher en App Runner.
+    Sigue la guía para instrucciones sobre cómo construir y desplegar la imagen Docker.
   EOT
 }

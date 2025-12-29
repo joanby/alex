@@ -80,7 +80,7 @@ def main():
 
         # Create Dockerfile
         dockerfile_content = """
-FROM public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/lambda/python:3.13
 
 # Copy requirements and install dependencies
 COPY requirements.txt .

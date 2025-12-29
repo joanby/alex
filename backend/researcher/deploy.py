@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Deploy researcher service to AWS App Runner
-Cross-platform deployment script for Mac/Windows/Linux
+Despliega el servicio researcher en AWS App Runner
+Script de despliegue multiplataforma para Mac/Windows/Linux
 """
 
 import subprocess
@@ -11,12 +11,12 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Cargar variables de entorno desde el archivo .env
 load_dotenv(override=True)
 
 
 def run_command(cmd, capture_output=False, shell=False):
-    """Run a command and handle errors."""
+    """Ejecuta un comando y maneja errores."""
     try:
         result = subprocess.run(
             cmd, shell=shell, capture_output=capture_output, text=True, check=True
@@ -25,18 +25,18 @@ def run_command(cmd, capture_output=False, shell=False):
             return result.stdout.strip()
         return None
     except subprocess.CalledProcessError as e:
-        print(f"Error running command: {e}")
+        print(f"Error al ejecutar el comando: {e}")
         if e.stderr:
-            print(f"Error details: {e.stderr}")
+            print(f"Detalles del error: {e.stderr}")
         sys.exit(1)
 
 
 def main():
-    print("Alex Researcher Service - Docker Deployment")
+    print("Servicio Alex Researcher - Despliegue Docker")
     print("===========================================")
 
-    # Get AWS account ID
-    print("\nGetting AWS account details...")
+    # Obtener el ID de cuenta de AWS
+    print("\nObteniendo detalles de la cuenta AWS...")
     account_id = run_command(
         ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
         capture_output=True,
@@ -44,16 +44,16 @@ def main():
 
     region = os.environ.get("DEFAULT_AWS_REGION")
     if not region:
-        print("Error: DEFAULT_AWS_REGION not found in your .env file.")
+        print("Error: DEFAULT_AWS_REGION no se encuentra en tu archivo .env.")
         sys.exit(1)
 
     ecr_repository = "alex-researcher"
 
-    print(f"AWS Account: {account_id}")
-    print(f"Region: {region}")
+    print(f"Cuenta AWS: {account_id}")
+    print(f"Región: {region}")
 
-    # Get ECR repository URL from Terraform
-    print("\nGetting ECR repository URL...")
+    # Obtener la URL del repositorio ECR desde Terraform
+    print("\nObteniendo URL del repositorio ECR...")
     terraform_dir = Path(__file__).parent.parent.parent / "terraform" / "4_researcher"
     original_dir = os.getcwd()
 
@@ -66,13 +66,13 @@ def main():
         os.chdir(original_dir)
 
     if not ecr_url:
-        print("Error: ECR repository not found. Run 'terraform apply' first.")
+        print("Error: Repositorio ECR no encontrado. Ejecuta 'terraform apply' primero.")
         sys.exit(1)
 
-    print(f"ECR Repository: {ecr_url}")
+    print(f"Repositorio ECR: {ecr_url}")
 
-    # Login to ECR
-    print("\nLogging in to ECR...")
+    # Iniciar sesión en ECR
+    print("\nIniciando sesión en ECR...")
     password = run_command(
         ["aws", "ecr", "get-login-password", "--region", region], capture_output=True
     )
@@ -84,20 +84,20 @@ def main():
     stdout, stderr = login_process.communicate(input=password)
 
     if login_process.returncode != 0:
-        print(f"Error logging into ECR: {stderr}")
+        print(f"Error al iniciar sesión en ECR: {stderr}")
         sys.exit(1)
 
-    print("Login successful!")
+    print("¡Inicio de sesión exitoso!")
 
-    # Generate a unique tag using timestamp
+    # Generar un tag único usando timestamp
     import time
 
     timestamp = int(time.time())
     image_tag = f"deploy-{timestamp}"
 
-    # Build Docker image
-    print(f"\nBuilding Docker image for linux/amd64 with tag: {image_tag}")
-    print("(This ensures compatibility with AWS App Runner)")
+    # Construir la imagen Docker
+    print(f"\nConstruyendo imagen Docker para linux/amd64 con la etiqueta: {image_tag}")
+    print("(Esto asegura compatibilidad con AWS App Runner)")
     run_command(
         [
             "docker",
@@ -106,28 +106,28 @@ def main():
             "linux/amd64",
             "-t",
             f"{ecr_repository}:{image_tag}",
-            # Removed --no-cache to use Docker layer caching for faster builds
+            # Eliminado --no-cache para usar caching de capas Docker y acelerar builds
             ".",
         ]
     )
 
-    # Tag for ECR with both unique tag and latest
-    print("\nTagging image for ECR...")
+    # Etiquetar para ECR con tag único y latest
+    print("\nEtiquetando imagen para ECR...")
     run_command(["docker", "tag", f"{ecr_repository}:{image_tag}", f"{ecr_url}:{image_tag}"])
     run_command(["docker", "tag", f"{ecr_repository}:{image_tag}", f"{ecr_url}:latest"])
 
-    # Push to ECR
-    print("\nPushing image to ECR...")
+    # Subir a ECR
+    print("\nSubiendo imagen a ECR...")
     run_command(["docker", "push", f"{ecr_url}:{image_tag}"])
     run_command(["docker", "push", f"{ecr_url}:latest"])
 
-    print("\n✅ Docker image pushed successfully!")
+    print("\n✅ ¡Imagen Docker subida exitosamente!")
     print(
-        "\nNext step: Run 'terraform apply' in terraform/4_researcher to create the App Runner service."
+        "\nSiguiente paso: Ejecuta 'terraform apply' en terraform/4_researcher para crear el servicio App Runner."
     )
 
-    # Get App Runner service ARN
-    print("\nGetting App Runner service details...")
+    # Obtener el ARN del servicio App Runner
+    print("\nObteniendo detalles del servicio App Runner...")
     try:
         services = run_command(
             [
@@ -148,10 +148,10 @@ def main():
             service_arns = json.loads(services)
             if service_arns:
                 service_arn = service_arns[0]
-                print(f"Found service: {service_arn}")
+                print(f"Servicio encontrado: {service_arn}")
 
-                # Get the current service configuration to preserve the access role
-                print("\nGetting current service configuration...")
+                # Obtener la configuración actual para preservar el rol de acceso
+                print("\nObteniendo configuración actual del servicio...")
                 service_details = run_command(
                     [
                         "aws",
@@ -169,8 +169,8 @@ def main():
                     capture_output=True,
                 )
 
-                # Update the service to use the new image with unique tag
-                print(f"\nUpdating service to use new image: {ecr_url}:{image_tag}")
+                # Actualizar el servicio para usar la nueva imagen con tag único
+                print(f"\nActualizando servicio para usar la nueva imagen: {ecr_url}:{image_tag}")
                 run_command(
                     [
                         "aws",
@@ -204,13 +204,13 @@ def main():
                     ],
                     capture_output=True,
                 )
-                print("✅ Service updated with new image!")
+                print("✅ ¡Servicio actualizado con la nueva imagen!")
 
-                # Wait for deployment to complete
-                print("\nWaiting for deployment to complete (this may take 5-10 minutes)...")
+                # Esperar a que el despliegue se complete
+                print("\nEsperando a que se complete el despliegue (esto puede tardar 5-10 minutos)...")
                 import time
 
-                max_attempts = 120  # 10 minutes with 5-second intervals
+                max_attempts = 120  # 10 minutos con intervalos de 5 segundos
                 attempts = 0
 
                 while attempts < max_attempts:
@@ -231,13 +231,13 @@ def main():
                         capture_output=True,
                     )
 
-                    # Strip any whitespace that might be causing comparison issues
+                    # Eliminar espacios en blanco que puedan causar problemas de comparación
                     status = status.strip()
 
                     if status == "RUNNING":
-                        print("\n✅ Deployment complete! Service is running.")
+                        print("\n✅ ¡Despliegue completado! El servicio está en ejecución.")
 
-                        # Get and display the service URL
+                        # Obtener y mostrar la URL del servicio
                         service_url = run_command(
                             [
                                 "aws",
@@ -255,13 +255,13 @@ def main():
                             capture_output=True,
                         )
 
-                        print(f"\n🚀 Your service is available at:")
+                        print(f"\n🚀 Tu servicio está disponible en:")
                         print(f"   https://{service_url}")
-                        print(f"\nTest it with:")
+                        print(f"\nPrueba con:")
                         print(f"   curl https://{service_url}/health")
                         break
                     elif status == "OPERATION_IN_PROGRESS":
-                        # Check operation status for more details
+                        # Comprobar el estado de la operación para más detalles
                         operation_status = run_command(
                             [
                                 "aws",
@@ -280,45 +280,45 @@ def main():
                         ).strip()
 
                         if operation_status == "SUCCEEDED":
-                            # Operation completed but service status might not be updated yet
-                            print("\n⏳ Operation succeeded, checking service status...")
+                            # La operación terminó pero aún puede no haberse actualizado el estado del servicio
+                            print("\n⏳ Operación completada, comprobando el estado del servicio...")
                             time.sleep(2)
                             continue
                         elif operation_status == "FAILED":
-                            print(f"\n❌ Deployment failed!")
-                            print("Check the AWS Console for error details.")
+                            print(f"\n❌ ¡El despliegue ha fallado!")
+                            print("Consulta la Consola de AWS para más detalles del error.")
                             break
                         else:
                             print(".", end="", flush=True)
-                            # Show progress every 30 seconds
+                            # Mostrar el progreso cada 30 segundos
                             if attempts > 0 and attempts % 6 == 0:
                                 elapsed_minutes = (attempts * 5) / 60
                                 print(
-                                    f" ({elapsed_minutes:.1f} minutes elapsed)", end="", flush=True
+                                    f" ({elapsed_minutes:.1f} minutos transcurridos)", end="", flush=True
                                 )
                             time.sleep(5)
                             attempts += 1
                     else:
-                        print(f"\n⚠️ Unexpected status: {status}")
-                        print("Check the AWS Console for more details.")
+                        print(f"\n⚠️ Estado inesperado: {status}")
+                        print("Consulta la Consola de AWS para más detalles.")
                         break
                 else:
-                    print("\n⚠️ Deployment is taking longer than expected.")
-                    print("Check the status in the AWS Console.")
+                    print("\n⚠️ El despliegue está tardando más de lo esperado.")
+                    print("Consulta el estado en la Consola de AWS.")
             else:
                 print(
-                    "\nApp Runner service not found. You may need to run 'terraform apply' first."
+                    "\nServicio App Runner no encontrado. Puede que tengas que ejecutar 'terraform apply' primero."
                 )
-                print("\nTo manually deploy:")
-                print("  1. Go to AWS Console > App Runner")
-                print("  2. Select 'alex-researcher' service")
-                print("  3. Click 'Deploy' to pull the latest image")
+                print("\nPara desplegar manualmente:")
+                print("  1. Ve a la Consola AWS > App Runner")
+                print("  2. Selecciona el servicio 'alex-researcher'")
+                print("  3. Haz clic en 'Deploy' para obtener la imagen más reciente")
     except Exception as e:
-        print(f"\nCouldn't automatically start deployment: {e}")
-        print("\nTo manually deploy:")
-        print("  1. Go to AWS Console > App Runner")
-        print("  2. Select 'alex-researcher' service")
-        print("  3. Click 'Deploy' to pull the latest image")
+        print(f"\nNo se pudo iniciar el despliegue automáticamente: {e}")
+        print("\nPara desplegar manualmente:")
+        print("  1. Ve a la Consola AWS > App Runner")
+        print("  2. Selecciona el servicio 'alex-researcher'")
+        print("  3. Haz clic en 'Deploy' para obtener la imagen más reciente")
 
 
 if __name__ == "__main__":

@@ -72,7 +72,7 @@ graph TB
 
 ### 3. **Funciones Lambda**
 - **alex-ingest**: Procesa documentos y almacena embeddings
-  - Runtime: Python 3.12
+  - Runtime: Python 3.13
   - Memoria: 512MB
   - Timeout: 30 segundos
 - **alex-scheduler**: Dispara investigación automática
@@ -175,7 +175,7 @@ graph LR
 - **IA/ML**: SageMaker, AWS Bedrock
 - **Almacenamiento**: S3 Vectors
 - **API**: API Gateway
-- **Lenguajes**: Python 3.12
+- **Lenguajes**: Python 3.13
 - **Contenedor**: Docker
 
 ## Ventajas Clave de S3 Vectors

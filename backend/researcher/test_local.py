@@ -1,6 +1,6 @@
 # \!/usr/bin/env python3
 """
-Test the researcher locally before deployment
+Prueba el agente researcher localmente antes del despliegue
 """
 
 import asyncio
@@ -14,11 +14,11 @@ load_dotenv(override=True)
 
 
 async def test_local():
-    """Test the researcher agent locally."""
-    print("Testing researcher agent locally...")
+    """Prueba el agente researcher localmente."""
+    print("Probando el agente researcher localmente...")
     print("=" * 60)
 
-    # Test with no topic (agent picks)
+    # Prueba sin tema (el agente elige)
     query = DEFAULT_RESEARCH_PROMPT
 
     try:
@@ -33,11 +33,11 @@ async def test_local():
 
             result = await Runner.run(agent, input=query)
 
-        print("\nRESULT:")
+        print("\nRESULTADO:")
         print("=" * 60)
         print(result.final_output)
         print("=" * 60)
-        print("\n✅ Test completed successfully!")
+        print("\n✅ ¡Prueba completada con éxito!")
 
     except Exception as e:
         print(f"\n❌ Error: {e}")

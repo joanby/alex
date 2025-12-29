@@ -196,7 +196,7 @@ resource "aws_lambda_function" "api" {
   role             = aws_iam_role.api_lambda_role.arn
   handler          = "lambda_handler.handler"
   source_code_hash = filebase64sha256("${path.module}/../../backend/api/api_lambda.zip")
-  runtime          = "python3.12"
+  runtime          = "python3.13"
   architectures    = ["x86_64"]
   timeout          = 30
   memory_size      = 512

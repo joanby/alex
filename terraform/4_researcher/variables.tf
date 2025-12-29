@@ -1,27 +1,27 @@
 variable "aws_region" {
-  description = "AWS region for resources"
+  description = "Región de AWS para los recursos"
   type        = string
 }
 
 variable "openai_api_key" {
-  description = "OpenAI API key for the researcher agent"
+  description = "Clave API de OpenAI para el agente researcher"
   type        = string
   sensitive   = true
 }
 
 variable "alex_api_endpoint" {
-  description = "Alex API endpoint from Part 3"
+  description = "Endpoint de la API de Alex desde la Parte 3"
   type        = string
 }
 
 variable "alex_api_key" {
-  description = "Alex API key from Part 3"
+  description = "Clave API de Alex desde la Parte 3"
   type        = string
   sensitive   = true
 }
 
 variable "scheduler_enabled" {
-  description = "Enable automated research scheduler"
+  description = "Habilitar programador automático de investigación"
   type        = bool
   default     = false
 }

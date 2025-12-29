@@ -229,7 +229,7 @@ resource "aws_lambda_function" "planner" {
   source_code_hash = fileexists("${path.module}/../../backend/planner/planner_lambda.zip") ? filebase64sha256("${path.module}/../../backend/planner/planner_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 900  # 15 minutes for planner
   memory_size = 2048  # 2GB for planner
   
@@ -280,7 +280,7 @@ resource "aws_lambda_function" "tagger" {
   source_code_hash = fileexists("${path.module}/../../backend/tagger/tagger_lambda.zip") ? filebase64sha256("${path.module}/../../backend/tagger/tagger_lambda.zip") : null
 
   handler     = "lambda_handler.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 300  # 5 minutes for tagger
   memory_size = 1024
 
@@ -320,7 +320,7 @@ resource "aws_lambda_function" "reporter" {
   source_code_hash = fileexists("${path.module}/../../backend/reporter/reporter_lambda.zip") ? filebase64sha256("${path.module}/../../backend/reporter/reporter_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 300  # 5 minutes for reporter agent
   memory_size = 1024
   
@@ -361,7 +361,7 @@ resource "aws_lambda_function" "charter" {
   source_code_hash = fileexists("${path.module}/../../backend/charter/charter_lambda.zip") ? filebase64sha256("${path.module}/../../backend/charter/charter_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 300  # 5 minutes for charter agent
   memory_size = 1024
   
@@ -401,7 +401,7 @@ resource "aws_lambda_function" "retirement" {
   source_code_hash = fileexists("${path.module}/../../backend/retirement/retirement_lambda.zip") ? filebase64sha256("${path.module}/../../backend/retirement/retirement_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 300  # 5 minutes for retirement agent
   memory_size = 1024
   

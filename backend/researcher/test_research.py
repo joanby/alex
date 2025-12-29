@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Test the researcher service by generating investment research.
-Cross-platform script for Mac/Windows/Linux.
+Prueba el servicio researcher generando investigación de inversión.
+Script multiplataforma para Mac/Windows/Linux.
 """
 
 import subprocess
@@ -12,9 +12,9 @@ import argparse
 
 
 def get_service_url():
-    """Get the App Runner service URL from AWS."""
+    """Obtener la URL del servicio App Runner desde AWS."""
     try:
-        # Get service ARN first
+        # Obtener primero el ARN del servicio
         result = subprocess.run([
             "aws", "apprunner", "list-services",
             "--query", "ServiceSummaryList[?ServiceName=='alex-researcher'].ServiceArn",
@@ -23,13 +23,13 @@ def get_service_url():
         
         service_arns = json.loads(result.stdout)
         if not service_arns:
-            print("❌ App Runner service 'alex-researcher' not found.")
-            print("   Have you deployed it yet? Run: python deploy.py")
+            print("❌ Servicio App Runner 'alex-researcher' no encontrado.")
+            print("   ¿Lo has desplegado ya? Ejecuta: python deploy.py")
             sys.exit(1)
         
         service_arn = service_arns[0]
         
-        # Get service URL
+        # Obtener la URL del servicio
         result = subprocess.run([
             "aws", "apprunner", "describe-service",
             "--service-arn", service_arn,
@@ -39,107 +39,107 @@ def get_service_url():
         
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error getting service URL: {e}")
-        print("   Make sure AWS CLI is configured and you have the right permissions.")
+        print(f"❌ Error obteniendo la URL del servicio: {e}")
+        print("   Asegúrate de que AWS CLI está configurado y tienes los permisos correctos.")
         sys.exit(1)
     except json.JSONDecodeError as e:
-        print(f"❌ Error parsing AWS response: {e}")
+        print(f"❌ Error al analizar la respuesta de AWS: {e}")
         sys.exit(1)
 
 
 def test_research(topic=None):
-    """Test the researcher service with a topic."""
-    # If no topic, let the agent pick one
-    display_topic = topic if topic else "Agent's choice (trending topic)"
+    """Prueba el servicio researcher con un tema."""
+    # Si no hay tema, dejar que el agente escoja uno
+    display_topic = topic if topic else "Elección del agente (tema en tendencia)"
     
-    # Get service URL
-    print("Getting App Runner service URL...")
+    # Obtener la URL del servicio
+    print("Obteniendo la URL del servicio App Runner...")
     service_url = get_service_url()
     
     if not service_url:
-        print("❌ Could not get service URL")
+        print("❌ No se pudo obtener la URL del servicio")
         sys.exit(1)
     
-    print(f"✅ Found service at: https://{service_url}")
+    print(f"✅ Servicio encontrado en: https://{service_url}")
     
-    # Test health endpoint first
-    print("\nChecking service health...")
+    # Probar primero el endpoint de salud
+    print("\nComprobando la salud del servicio...")
     try:
         health_url = f"https://{service_url}/health"
         response = requests.get(health_url, timeout=10)
         response.raise_for_status()
-        print("✅ Service is healthy")
+        print("✅ El servicio está saludable")
     except requests.exceptions.RequestException as e:
-        print(f"❌ Health check failed: {e}")
-        print("   The service may still be starting. Try again in a minute.")
+        print(f"❌ Falló la comprobación de salud: {e}")
+        print("   El servicio puede que todavía esté iniciando. Inténtalo de nuevo en un minuto.")
         sys.exit(1)
     
-    # Call research endpoint
-    print(f"\n🔬 Generating research for: {display_topic}")
-    print("   This will take 20-30 seconds as the agent researches and analyzes...")
+    # Llamar al endpoint de research
+    print(f"\n🔬 Generando investigación para: {display_topic}")
+    print("   Esto tomará 20-30 segundos mientras el agente investiga y analiza...")
     
     try:
         research_url = f"https://{service_url}/research"
-        # Only include topic in payload if it's provided
+        # Solo incluir el tema en el payload si está proporcionado
         payload = {"topic": topic} if topic else {}
         response = requests.post(
             research_url,
             json=payload,
-            timeout=180  # Give it 3 minutes for research
+            timeout=180  # Darle 3 minutos para la investigación
         )
         response.raise_for_status()
         
-        # Parse and display the result
+        # Analizar y mostrar el resultado
         result = response.json()
         
-        print("\n✅ Research generated successfully!")
+        print("\n✅ ¡Investigación generada exitosamente!")
         print("\n" + "="*60)
-        print("RESEARCH RESULT:")
+        print("RESULTADO DE LA INVESTIGACIÓN:")
         print("="*60)
         print(result)
         print("="*60)
         
-        print("\n✅ The research has been automatically stored in your knowledge base.")
-        print("   To verify, run:")
+        print("\n✅ La investigación ha sido almacenada automáticamente en tu base de conocimientos.")
+        print("   Para verificar, ejecuta:")
         print("     cd ../ingest")
         print("     uv run test_search_s3vectors.py")
         
     except requests.exceptions.Timeout:
-        print("❌ Request timed out. The service might be under heavy load.")
-        print("   Try again in a moment.")
+        print("❌ Tiempo de espera agotado. El servicio podría estar bajo alta carga.")
+        print("   Inténtalo de nuevo en un momento.")
         sys.exit(1)
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error calling research endpoint: {e}")
+        print(f"❌ Error al llamar al endpoint de investigación: {e}")
         if hasattr(e, 'response') and e.response is not None:
             try:
                 error_detail = e.response.json()
-                print(f"   Error details: {error_detail}")
+                print(f"   Detalles del error: {error_detail}")
             except (json.JSONDecodeError, AttributeError):
-                print(f"   Response: {e.response.text}")
+                print(f"   Respuesta: {e.response.text}")
         sys.exit(1)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Test the Alex Researcher service",
+        description="Prueba el servicio Alex Researcher",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  # Let agent pick a trending topic
+Ejemplos:
+  # Dejar que el agente elija un tema en tendencia
   uv run test_research.py
   
-  # Research specific topic
-  uv run test_research.py "Tesla competitive advantages"
+  # Investigar un tema específico
+  uv run test_research.py "Ventajas competitivas de Tesla"
   
-  # Research another topic
-  uv run test_research.py "Microsoft cloud revenue growth"
+  # Investigar otro tema
+  uv run test_research.py "Crecimiento de ingresos de la nube de Microsoft"
         """
     )
     parser.add_argument(
         "topic",
         nargs="?",
         default=None,
-        help="Investment topic to research (optional - agent will pick trending topic if not provided)"
+        help="Tema de inversión a investigar (opcional - el agente elegirá un tema en tendencia si no se proporciona)"
     )
     
     args = parser.parse_args()

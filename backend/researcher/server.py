@@ -1,5 +1,5 @@
 """
-Alex Researcher Service - Investment Advice Agent
+Servicio Alex Researcher - Agente de Asesoría de Inversiones
 """
 
 import os
@@ -13,51 +13,51 @@ from dotenv import load_dotenv
 from agents import Agent, Runner, trace
 from agents.extensions.models.litellm_model import LitellmModel
 
-# Suppress LiteLLM warnings about optional dependencies
+# Suprimir advertencias de LiteLLM sobre dependencias opcionales
 logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
 
-# Import from our modules
+# Importar desde nuestros módulos
 from context import get_agent_instructions, DEFAULT_RESEARCH_PROMPT
 from mcp_servers import create_playwright_mcp_server
 from tools import ingest_financial_document
 
-# Load environment
+# Cargar las variables de entorno
 load_dotenv(override=True)
 
-app = FastAPI(title="Alex Researcher Service")
+app = FastAPI(title="Servicio Alex Researcher")
 
 
-# Request model
+# Modelo de solicitud
 class ResearchRequest(BaseModel):
-    topic: Optional[str] = None  # Optional - if not provided, agent picks a topic
+    topic: Optional[str] = None  # Opcional - si no se proporciona, el agente elige un tema
 
 
 async def run_research_agent(topic: str = None) -> str:
-    """Run the research agent to generate investment advice."""
+    """Ejecuta el agente de investigación para generar asesoría de inversiones."""
 
-    # Prepare the user query
+    # Preparar la consulta del usuario
     if topic:
-        query = f"Research this investment topic: {topic}"
+        query = f"Investiga este tema de inversión: {topic}"
     else:
         query = DEFAULT_RESEARCH_PROMPT
 
-    # Please override these variables with the region you are using
-    # Other choices: us-west-2 (for OpenAI OSS models) and eu-central-1
+    # Por favor, sobrescribe estas variables con la región que usas
+    # Otras opciones: us-west-2 (para modelos OSS de OpenAI) y eu-central-1
     REGION = "us-east-1"
-    os.environ["AWS_REGION_NAME"] = REGION  # LiteLLM's preferred variable
-    os.environ["AWS_REGION"] = REGION  # Boto3 standard
-    os.environ["AWS_DEFAULT_REGION"] = REGION  # Fallback
+    os.environ["AWS_REGION_NAME"] = REGION  # Variable preferida por LiteLLM
+    os.environ["AWS_REGION"] = REGION  # Estándar Boto3
+    os.environ["AWS_DEFAULT_REGION"] = REGION  # Alternativa
 
-    # Please override this variable with the model you are using
-    # Common choices: bedrock/eu.amazon.nova-pro-v1:0 for EU and bedrock/us.amazon.nova-pro-v1:0 for US
-    # or bedrock/amazon.nova-pro-v1:0 if you are not using inference profiles
-    # bedrock/openai.gpt-oss-120b-1:0 for OpenAI OSS models
-    # bedrock/converse/us.anthropic.claude-sonnet-4-20250514-v1:0 for Claude Sonnet 4
-    # NOTE that nova-pro is needed to support tools and MCP servers; nova-lite is not enough - thank you Yuelin L.!
+    # Por favor, sobrescribe esta variable con el modelo que estás usando
+    # Opciones comunes: bedrock/eu.amazon.nova-pro-v1:0 para EU y bedrock/us.amazon.nova-pro-v1:0 para US
+    # o bedrock/amazon.nova-pro-v1:0 si no usas perfiles de inferencia
+    # bedrock/openai.gpt-oss-120b-1:0 para modelos OSS de OpenAI
+    # bedrock/converse/us.anthropic.claude-sonnet-4-20250514-v1:0 para Claude Sonnet 4
+    # NOTA: se necesita nova-pro para soportar herramientas y MCP servers; nova-lite no es suficiente - gracias Yuelin L.!
     MODEL = "bedrock/us.amazon.nova-pro-v1:0"
     model = LitellmModel(model=MODEL)
 
-    # Create and run the agent with MCP server
+    # Crear y ejecutar el agente con el servidor MCP
     with trace("Researcher"):
         async with create_playwright_mcp_server(timeout_seconds=60) as playwright_mcp:
             agent = Agent(
@@ -75,7 +75,7 @@ async def run_research_agent(topic: str = None) -> str:
 
 @app.get("/")
 async def root():
-    """Health check endpoint."""
+    """Punto de salud (health check)."""
     return {
         "service": "Alex Researcher",
         "status": "healthy",
@@ -86,20 +86,20 @@ async def root():
 @app.post("/research")
 async def research(request: ResearchRequest) -> str:
     """
-    Generate investment research and advice.
+    Genera investigación y asesoría de inversiones.
 
-    The agent will:
-    1. Browse current financial websites for data
-    2. Analyze the information found
-    3. Store the analysis in the knowledge base
+    El agente:
+    1. Navegará por sitios web financieros actuales para obtener datos
+    2. Analizará la información encontrada
+    3. Guardará el análisis en la base de conocimiento
 
-    If no topic is provided, the agent will pick a trending topic.
+    Si no se proporciona un tema, el agente elegirá uno de tendencia.
     """
     try:
         response = await run_research_agent(request.topic)
         return response
     except Exception as e:
-        print(f"Error in research endpoint: {e}")
+        print(f"Error en el endpoint de investigación: {e}")
         import traceback
 
         traceback.print_exc()
@@ -109,28 +109,28 @@ async def research(request: ResearchRequest) -> str:
 @app.get("/research/auto")
 async def research_auto():
     """
-    Automated research endpoint for scheduled runs.
-    Picks a trending topic automatically and generates research.
-    Used by EventBridge Scheduler for periodic research updates.
+    Endpoint de investigación automática para ejecuciones programadas.
+    Elige automáticamente un tema de tendencia y genera investigación.
+    Usado por EventBridge Scheduler para actualizaciones periódicas de investigación.
     """
     try:
-        # Always use agent's choice for automated runs
+        # Siempre usar la elección del agente para ejecuciones automáticas
         response = await run_research_agent(topic=None)
         return {
             "status": "success",
             "timestamp": datetime.now(UTC).isoformat(),
-            "message": "Automated research completed",
+            "message": "Investigación automatizada completada",
             "preview": response[:200] + "..." if len(response) > 200 else response,
         }
     except Exception as e:
-        print(f"Error in automated research: {e}")
+        print(f"Error en la investigación automatizada: {e}")
         return {"status": "error", "timestamp": datetime.now(UTC).isoformat(), "error": str(e)}
 
 
 @app.get("/health")
 async def health():
-    """Detailed health check."""
-    # Debug container detection
+    """Chequeo de salud detallado."""
+    # Detección de contenedor para depuración
     container_indicators = {
         "dockerenv": os.path.exists("/.dockerenv"),
         "containerenv": os.path.exists("/run/.containerenv"),
@@ -152,23 +152,23 @@ async def health():
 
 @app.get("/test-bedrock")
 async def test_bedrock():
-    """Test Bedrock connection directly."""
+    """Probar la conexión con Bedrock directamente."""
     try:
         import boto3
 
-        # Set ALL region environment variables
+        # Establecer TODAS las variables de región de AWS
         os.environ["AWS_REGION_NAME"] = "us-east-1"
         os.environ["AWS_REGION"] = "us-east-1"
         os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
-        # Debug: Check what region boto3 is actually using
+        # Depuración: Verificar qué región usa boto3 realmente
         session = boto3.Session()
         actual_region = session.region_name
 
-        # Try to create Bedrock client explicitly in us-west-2
+        # Intentar crear el cliente de Bedrock explícitamente en us-west-2
         client = boto3.client("bedrock-runtime", region_name="us-west-2")
 
-        # Debug: Try to list models to verify connection
+        # Depuración: Listar modelos para verificar conexión
         try:
             bedrock_client = boto3.client("bedrock", region_name="us-west-2")
             models = bedrock_client.list_foundation_models()
@@ -176,22 +176,22 @@ async def test_bedrock():
                 m["modelId"] for m in models["modelSummaries"] if "openai" in m["modelId"].lower()
             ]
         except Exception as list_error:
-            openai_models = f"Error listing: {str(list_error)}"
+            openai_models = f"Error al listar: {str(list_error)}"
 
-        # Try basic model invocation with Nova Pro
+        # Intentar invocación básica al modelo Nova Pro
         model = LitellmModel(model="bedrock/amazon.nova-pro-v1:0")
 
         agent = Agent(
-            name="Test Agent",
-            instructions="You are a helpful assistant. Be very brief.",
+            name="Agente de Prueba",
+            instructions="Eres un asistente útil. Sé muy breve.",
             model=model,
         )
 
-        result = await Runner.run(agent, input="Say hello in 5 words or less", max_turns=1)
+        result = await Runner.run(agent, input="Saluda en 5 palabras o menos", max_turns=1)
 
         return {
             "status": "success",
-            "model": str(model.model),  # Use actual model from LitellmModel
+            "model": str(model.model),  # Usar el modelo real de LitellmModel
             "region": actual_region,
             "response": result.final_output,
             "debug": {

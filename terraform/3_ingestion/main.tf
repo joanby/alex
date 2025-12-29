@@ -8,19 +8,19 @@ terraform {
     }
   }
   
-  # Using local backend - state will be stored in terraform.tfstate in this directory
-  # This is automatically gitignored for security
+  # Usando backend local - el estado se almacenará en terraform.tfstate en este directorio
+  # Esto se agrega automáticamente a .gitignore por seguridad
 }
 
 provider "aws" {
   region = var.aws_region
 }
 
-# Data source for current caller identity
+# Fuente de datos para la identidad actual del llamador
 data "aws_caller_identity" "current" {}
 
 # ========================================
-# S3 Vectors Bucket
+# Bucket S3 de Vectores
 # ========================================
 
 resource "aws_s3_bucket" "vectors" {
@@ -60,10 +60,10 @@ resource "aws_s3_bucket_public_access_block" "vectors" {
 }
 
 # ========================================
-# Lambda Function for Ingestion
+# Función Lambda para Ingesta
 # ========================================
 
-# IAM role for Lambda
+# Rol IAM para Lambda
 resource "aws_iam_role" "lambda_role" {
   name = "alex-ingest-lambda-role"
   
@@ -86,7 +86,7 @@ resource "aws_iam_role" "lambda_role" {
   }
 }
 
-# Lambda policy for S3 Vectors and SageMaker
+# Política de Lambda para S3 Vectors y SageMaker
 resource "aws_iam_role_policy" "lambda_policy" {
   name = "alex-ingest-lambda-policy"
   role = aws_iam_role.lambda_role.id
@@ -137,17 +137,17 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
-# Lambda function
+# Función Lambda
 resource "aws_lambda_function" "ingest" {
   function_name = "alex-ingest"
   role          = aws_iam_role.lambda_role.arn
   
-  # Note: The deployment package will be created by the guide instructions
+  # Nota: El paquete de despliegue será creado según las instrucciones de la guía
   filename         = "${path.module}/../../backend/ingest/lambda_function.zip"
   source_code_hash = fileexists("${path.module}/../../backend/ingest/lambda_function.zip") ? filebase64sha256("${path.module}/../../backend/ingest/lambda_function.zip") : null
   
   handler = "ingest_s3vectors.lambda_handler"
-  runtime = "python3.12"
+  runtime = "python3.13"
   timeout = 60
   memory_size = 512
   
@@ -164,7 +164,7 @@ resource "aws_lambda_function" "ingest" {
   }
 }
 
-# CloudWatch Log Group
+# Grupo de logs de CloudWatch
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/alex-ingest"
   retention_in_days = 7
@@ -179,10 +179,10 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 # API Gateway
 # ========================================
 
-# REST API
+# API REST
 resource "aws_api_gateway_rest_api" "api" {
   name        = "alex-api"
-  description = "Alex Financial Planner API"
+  description = "API del Planificador Financiero Alex"
   
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -194,14 +194,14 @@ resource "aws_api_gateway_rest_api" "api" {
   }
 }
 
-# API Resource
+# Recurso de API
 resource "aws_api_gateway_resource" "ingest" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   parent_id   = aws_api_gateway_rest_api.api.root_resource_id
   path_part   = "ingest"
 }
 
-# API Method
+# Método de API
 resource "aws_api_gateway_method" "ingest_post" {
   rest_api_id   = aws_api_gateway_rest_api.api.id
   resource_id   = aws_api_gateway_resource.ingest.id
@@ -210,7 +210,7 @@ resource "aws_api_gateway_method" "ingest_post" {
   api_key_required = true
 }
 
-# Lambda Integration
+# Integración Lambda
 resource "aws_api_gateway_integration" "lambda" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.ingest.id
@@ -221,7 +221,7 @@ resource "aws_api_gateway_integration" "lambda" {
   uri                    = aws_lambda_function.ingest.invoke_arn
 }
 
-# Lambda permission for API Gateway
+# Permisos de Lambda para API Gateway
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -230,7 +230,7 @@ resource "aws_lambda_permission" "api_gateway" {
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 }
 
-# API Deployment
+# Despliegue de API
 resource "aws_api_gateway_deployment" "api" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   
@@ -247,7 +247,7 @@ resource "aws_api_gateway_deployment" "api" {
   }
 }
 
-# API Stage
+# Etapa de API
 resource "aws_api_gateway_stage" "api" {
   deployment_id = aws_api_gateway_deployment.api.id
   rest_api_id   = aws_api_gateway_rest_api.api.id
@@ -259,7 +259,7 @@ resource "aws_api_gateway_stage" "api" {
   }
 }
 
-# API Key
+# Clave de API
 resource "aws_api_gateway_api_key" "api_key" {
   name = "alex-api-key"
   
@@ -269,7 +269,7 @@ resource "aws_api_gateway_api_key" "api_key" {
   }
 }
 
-# Usage Plan
+# Plan de uso
 resource "aws_api_gateway_usage_plan" "plan" {
   name = "alex-usage-plan"
   
@@ -289,7 +289,7 @@ resource "aws_api_gateway_usage_plan" "plan" {
   }
 }
 
-# Usage Plan Key
+# Clave de plan de uso
 resource "aws_api_gateway_usage_plan_key" "plan_key" {
   key_id        = aws_api_gateway_api_key.api_key.id
   key_type      = "API_KEY"

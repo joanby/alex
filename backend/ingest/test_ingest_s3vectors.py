@@ -1,6 +1,6 @@
 """
-Test script for ingesting documents directly to S3 Vectors.
-This bypasses API Gateway and tests the S3 Vectors service directly.
+Script de prueba para ingestar documentos directamente a S3 Vectors.
+Esto evita el API Gateway y prueba el servicio de S3 Vectors directamente.
 """
 
 import os
@@ -11,25 +11,25 @@ import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load environment variables from project root
+# Cargar variables de entorno desde el directorio raíz del proyecto
 env_path = Path(__file__).parent.parent.parent / '.env'
 load_dotenv(env_path, override=True)
 
-# Get configuration
+# Obtener la configuración
 VECTOR_BUCKET = os.getenv('VECTOR_BUCKET')
 SAGEMAKER_ENDPOINT = os.getenv('SAGEMAKER_ENDPOINT', 'alex-embedding-endpoint')
 INDEX_NAME = 'financial-research'
 
 if not VECTOR_BUCKET:
-    print("Error: Please run Guide 3 Step 4 to save VECTOR_BUCKET to .env")
+    print("Error: Por favor ejecuta la Guía 3 Paso 4 para guardar VECTOR_BUCKET en .env")
     exit(1)
 
-# Initialize AWS clients
+# Inicializar clientes de AWS
 s3_vectors = boto3.client('s3vectors')
 sagemaker_runtime = boto3.client('sagemaker-runtime')
 
 def get_embedding(text):
-    """Get embedding vector from SageMaker endpoint."""
+    """Obtener vector de embedding desde el endpoint de SageMaker."""
     response = sagemaker_runtime.invoke_endpoint(
         EndpointName=SAGEMAKER_ENDPOINT,
         ContentType='application/json',
@@ -37,25 +37,25 @@ def get_embedding(text):
     )
     
     result = json.loads(response['Body'].read().decode())
-    # HuggingFace returns nested array [[[embedding]]], extract the actual embedding
+    # HuggingFace devuelve un arreglo anidado [[[embedding]]], extraer el embedding real
     if isinstance(result, list) and len(result) > 0:
         if isinstance(result[0], list) and len(result[0]) > 0:
             if isinstance(result[0][0], list):
-                return result[0][0]  # Extract from [[[embedding]]]
-            return result[0]  # Extract from [[embedding]]
-    return result  # Return as-is if not nested
+                return result[0][0]  # Extraer de [[[embedding]]]
+            return result[0]  # Extraer de [[embedding]]
+    return result  # Devolver tal cual si no está anidado
 
 def ingest_document(text, metadata=None):
-    """Ingest a document directly to S3 Vectors."""
-    # Get embedding from SageMaker
-    print(f"Getting embedding for text: {text[:100]}...")
+    """Ingestar un documento directamente en S3 Vectors."""
+    # Obtener el embedding desde SageMaker
+    print(f"Obteniendo embedding para el texto: {text[:100]}...")
     embedding = get_embedding(text)
     
-    # Generate unique ID for the vector
+    # Generar un ID único para el vector
     vector_id = str(uuid.uuid4())
     
-    # Store in S3 Vectors
-    print(f"Storing vector in bucket: {VECTOR_BUCKET}, index: {INDEX_NAME}")
+    # Almacenar en S3 Vectors
+    print(f"Guardando vector en el bucket: {VECTOR_BUCKET}, índice: {INDEX_NAME}")
     s3_vectors.put_vectors(
         vectorBucketName=VECTOR_BUCKET,
         indexName=INDEX_NAME,
@@ -65,7 +65,7 @@ def ingest_document(text, metadata=None):
             "metadata": {
                 "text": text,
                 "timestamp": datetime.datetime.utcnow().isoformat(),
-                **(metadata or {})  # Include any additional metadata
+                **(metadata or {})  # Incluir cualquier metadata adicional
             }
         }]
     )
@@ -73,19 +73,19 @@ def ingest_document(text, metadata=None):
     return vector_id
 
 def main():
-    """Test direct ingestion to S3 Vectors."""
+    """Probar ingesta directa en S3 Vectors."""
     
-    print("Testing S3 Vectors Direct Ingestion")
+    print("Probando la Ingesta Directa en S3 Vectors")
     print("=" * 60)
     print(f"Bucket: {VECTOR_BUCKET}")
-    print(f"Index: {INDEX_NAME}")
-    print(f"Embedding Model: {SAGEMAKER_ENDPOINT}")
+    print(f"Índice: {INDEX_NAME}")
+    print(f"Modelo de Embedding: {SAGEMAKER_ENDPOINT}")
     print()
     
-    # Test documents
+    # Documentos de prueba
     test_docs = [
         {
-            'text': "Tesla Inc. (TSLA) is an electric vehicle and clean energy company. It designs, manufactures, and sells electric vehicles, energy storage systems, and solar panels.",
+            'text': "Tesla Inc. (TSLA) es una empresa de vehículos eléctricos y energía limpia. Diseña, fabrica y vende vehículos eléctricos, sistemas de almacenamiento de energía y paneles solares.",
             'metadata': {
                 'ticker': 'TSLA',
                 'company_name': 'Tesla Inc.',
@@ -94,7 +94,7 @@ def main():
             }
         },
         {
-            'text': "Amazon.com Inc. (AMZN) is a multinational technology company focusing on e-commerce, cloud computing (AWS), digital streaming, and artificial intelligence.",
+            'text': "Amazon.com Inc. (AMZN) es una compañía tecnológica multinacional centrada en comercio electrónico, computación en la nube (AWS), streaming digital e inteligencia artificial.",
             'metadata': {
                 'ticker': 'AMZN',
                 'company_name': 'Amazon.com Inc.',
@@ -103,7 +103,7 @@ def main():
             }
         },
         {
-            'text': "NVIDIA Corporation (NVDA) designs graphics processing units (GPUs) for gaming and professional markets, as well as system on chip units for mobile computing and automotive.",
+            'text': "NVIDIA Corporation (NVDA) diseña unidades de procesamiento gráfico (GPU) para juegos y mercados profesionales, así como unidades de sistema en chip para computación móvil y automoción.",
             'metadata': {
                 'ticker': 'NVDA',
                 'company_name': 'NVIDIA Corporation',
@@ -113,23 +113,23 @@ def main():
         }
     ]
     
-    # Ingest each document
+    # Ingestar cada documento
     for i, doc in enumerate(test_docs, 1):
-        print(f"Ingesting document {i}: {doc['metadata'].get('ticker', 'Unknown')}")
+        print(f"Ingestando documento {i}: {doc['metadata'].get('ticker', 'Desconocido')}")
         try:
             doc_id = ingest_document(doc['text'], doc['metadata'])
-            print(f"  ✓ Success! Document ID: {doc_id}")
+            print(f"  ✓ ¡Éxito! ID del documento: {doc_id}")
         except Exception as e:
             print(f"  ✗ Error: {e}")
         print()
     
-    print("Testing complete!")
-    print("\nYour S3 Vectors knowledge base now contains information about:")
+    print("¡Prueba completada!")
+    print("\nTu base de conocimiento S3 Vectors ahora contiene información sobre:")
     for doc in test_docs:
         print(f"  - {doc['metadata']['company_name']} ({doc['metadata']['ticker']})")
     
-    print("\n⏱️  Note: S3 Vectors updates are available immediately.")
-    print("   You can run test_search_s3vectors.py right away to search!")
+    print("\n⏱️  Nota: Las actualizaciones en S3 Vectors están disponibles inmediatamente.")
+    print("   ¡Puedes ejecutar test_search_s3vectors.py ahora mismo para buscar!")
 
 if __name__ == "__main__":
     main()

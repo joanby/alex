@@ -68,7 +68,7 @@ def package_lambda():
             f"{backend_dir}/database:/database",
             "--entrypoint",
             "/bin/bash",
-            "public.ecr.aws/lambda/python:3.12",
+            "public.ecr.aws/lambda/python:3.13",
             "-c",
             """cd /build && pip install --target ./package -r requirements.txt && pip install --target ./package --no-deps /database""",
         ]

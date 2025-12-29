@@ -1,92 +1,92 @@
-# Building Alex: Part 5 - Database & Shared Infrastructure
+# Construyendo Alex: Parte 5 - Base de Datos e Infraestructura Compartida
 
-Welcome to Part 5! We're now entering the second phase of building Alex - transforming it from a research tool into a complete financial planning SaaS platform. In this guide, we'll set up Aurora Serverless v2 PostgreSQL with the Data API and create a reusable database library that all our AI agents will use.
+¡Bienvenido a la Parte 5! Ahora entramos en la segunda fase de construir Alex: transformarlo de una herramienta de investigación a una plataforma SaaS completa de planificación financiera. En esta guía, configuraremos Aurora Serverless v2 PostgreSQL con la Data API y crearemos una librería reutilizable de base de datos que usarán todos nuestros agentes de IA.
 
-## REMINDER - MAJOR TIP!!
+## RECORDATORIO - ¡CONSEJO IMPORTANTE!
 
-There's a file `gameplan.md` in the project root that describes the entire Alex project to an AI Agent, so that you can ask questions and get help. There's also an identical `CLAUDE.md` and `AGENTS.md` file. If you need help, simply start your favorite AI Agent, and give it this instruction:
+Hay un archivo llamado `gameplan.md` en la raíz del proyecto que describe todo el proyecto Alex a un Agente de IA, para que puedas hacer preguntas y obtener ayuda. También hay un archivo idéntico `CLAUDE.md` y `AGENTS.md`. Si necesitas ayuda, simplemente inicia tu Agente de IA favorito y dale esta instrucción:
 
-> I am a student on the course AI in Production. We are in the course repo. Read the file `gameplan.md` for a briefing on the project. Read this file completely and read all the linked guides carefully. Do not start any work apart from reading and checking directory structure. When you have completed all reading, let me know if you have questions before we get started.
+> Soy un estudiante en el curso AI in Production. Estamos en el repositorio del curso. Lee el archivo `gameplan.md` para informarte sobre el proyecto. Lee este archivo completamente y revisa detenidamente todas las guías enlazadas. No empieces ningún trabajo salvo leer y comprobar la estructura del directorio. Cuando hayas completado toda la lectura, avísame si tienes preguntas antes de que empecemos.
 
-After answering questions, say exactly which guide you're on and any issues. Be careful to validate every suggestion; always ask for the root cause and evidence of problems. LLMs have a tendency to jump to conclusions, but they often correct themselves when they need to provide evidence.
+Después de responder preguntas, indica exactamente en qué guía estás y cualquier problema. Sé cuidadoso validando cada sugerencia; siempre pregunta la causa raíz y evidencia de los problemas. Los LLM suelen saltar a conclusiones, pero a menudo se corrigen cuando tienen que proporcionar pruebas.
 
-## Why Aurora Serverless v2 with Data API?
+## ¿Por qué Aurora Serverless v2 con Data API?
 
-AWS offers several database options, each with different strengths:
+AWS ofrece varias opciones de bases de datos, cada una con diferentes ventajas:
 
-### Common AWS Database Services
+### Servicios Comunes de Bases de Datos en AWS
 
-| Service           | Type            | Best For                                  | Why We Didn't Choose It                                     |
-| ----------------- | --------------- | ----------------------------------------- | ----------------------------------------------------------- |
-| **DynamoDB**      | NoSQL           | Simple key-value lookups, high-scale apps | No SQL joins, complex for relational data like portfolios   |
-| **RDS (Regular)** | Traditional SQL | Predictable workloads, always-on apps     | Requires VPC/networking setup, always running = higher cost |
-| **DocumentDB**    | Document NoSQL  | MongoDB-compatible apps                   | Overkill for structured financial data                      |
-| **Neptune**       | Graph           | Social networks, recommendation engines   | Wrong fit - we don't need graph relationships               |
-| **Timestream**    | Time-series     | IoT, metrics, logs                        | Too specialized for general portfolio data                  |
+| Servicio           | Tipo            | Mejor Para                                | Por qué no lo elegimos                                            |
+| -----------------  | --------------- | ----------------------------------------- | ---------------------------------------------------------------  |
+| **DynamoDB**       | NoSQL           | Búsquedas clave-valor simples, apps de gran escala | No soporta joins en SQL, complejo para datos relacionales como portafolios |
+| **RDS (Regular)**  | SQL Tradicional | Cargas predecibles, apps siempre activas  | Requiere configuración de VPC/red, siempre encendido = coste alto |
+| **DocumentDB**     | NoSQL Documento | Apps compatibles con MongoDB              | Demasiado para datos financieros estructurados                   |
+| **Neptune**        | Grafos           | Redes sociales, motores de recomendación  | No es adecuado - no necesitamos relaciones de grafo              |
+| **Timestream**     | Series temporales| IoT, métricas, logs                       | Demasiado específico para datos generales de portafolios         |
 
-### Why Aurora Serverless v2 PostgreSQL?
+### ¿Por qué Aurora Serverless v2 PostgreSQL?
 
-We chose **Aurora Serverless v2 with Data API** because it offers:
+Elegimos **Aurora Serverless v2 con Data API** porque ofrece:
 
-1. **No VPC Complexity** - The Data API provides HTTP access, eliminating networking setup
-2. **Scales to Zero** - Can pause after inactivity, reducing costs to ~$1.44/day minimum
-3. **PostgreSQL** - Full SQL support with JSONB for flexible data (allocation percentages)
-4. **Serverless** - Automatically scales with demand, perfect for learning projects
-5. **Data API** - Direct HTTP access from Lambda without connection pools or VPC
-6. **Pay-per-use** - Only pay for what you use, ideal for development
+1. **Sin complejidad de VPC** - La Data API ofrece acceso HTTP, eliminando configuración de red
+2. **Escala a cero** - Puede pausarse tras inactividad, reduciendo costes hasta unos ~$1.44/día mínimo
+3. **PostgreSQL** - Soporte SQL completo con JSONB para datos flexibles (porcentaje de asignaciones)
+4. **Serverless** - Escala automáticamente según demanda, perfecto para proyectos de aprendizaje
+5. **Data API** - Acceso HTTP directo desde Lambda sin pools de conexión ni VPC
+6. **Pago por uso** - Solo pagas por lo que usas, ideal para desarrollo
 
-For students learning AWS, this removes the complexity of VPCs, security groups, and connection management while providing a production-grade database that works seamlessly with Lambda functions.
+Para estudiantes aprendiendo AWS, esto elimina la complejidad de VPCs, grupos de seguridad y gestión de conexiones, mientras proporciona una base de datos de nivel producción que funciona perfectamente con funciones Lambda.
 
-## What We're Building
+## ¿Qué vamos a construir?
 
-In this guide, you'll deploy:
+En esta guía desplegarás:
 
-- Aurora Serverless v2 PostgreSQL cluster with Data API enabled (no VPC needed!)
-- Complete database schema for portfolios, users, and reports
-- Shared database package with Pydantic validation
-- Seed data with 22 popular ETFs
-- Database reset scripts for easy development
+- Clúster Aurora Serverless v2 PostgreSQL con Data API activada (¡sin necesidad de VPC!)
+- Esquema de base de datos completo para portafolios, usuarios e informes
+- Paquete compartido de base de datos con validación Pydantic
+- Datos de prueba con 22 ETFs populares
+- Scripts para reiniciar la base de datos fácilmente durante el desarrollo
 
-Here's how the database fits into our architecture:
+Así es como encaja la base de datos en nuestra arquitectura:
 
 ```mermaid
 graph TB
-    User[User] -->|Manage Portfolio| API[API Gateway]
-    API -->|CRUD Operations| Lambda[API Lambda]
+    User[Usuario] -->|Gestiona Portafolio| API[API Gateway]
+    API -->|Operaciones CRUD| Lambda[API Lambda]
     Lambda -->|Data API| Aurora[(Aurora Serverless v2<br/>PostgreSQL)]
 
-    Planner[Financial Planner<br/>Orchestrator] -->|Read/Write| Aurora
-    Tagger[InstrumentTagger] -->|Update Instruments| Aurora
-    Reporter[Report Writer] -->|Store Reports| Aurora
-    Charter[Chart Maker] -->|Store Charts| Aurora
-    Retirement[Retirement Specialist] -->|Store Projections| Aurora
+    Planner[Planificador Financiero<br/>Orquestador] -->|Lectura/Escritura| Aurora
+    Tagger[InstrumentTagger] -->|Actualiza Instrumentos| Aurora
+    Reporter[Generador de Reportes] -->|Guarda Reportes| Aurora
+    Charter[Generador de Gráficas] -->|Guarda Gráficas| Aurora
+    Retirement[Especialista en Retiro] -->|Guarda Proyecciones| Aurora
 
     style Aurora fill:#FF9900
     style Planner fill:#FFD700
     style API fill:#90EE90
 ```
 
-## Prerequisites
+## Prerrequisitos
 
-Before starting, ensure you have:
+Antes de empezar, asegúrate de tener:
 
-- Completed Guides 1-4 (all infrastructure from Parts 1-4)
-- AWS CLI configured
-- Python with `uv` package manager installed
-- Terraform installed
-- Docker Desktop installed and running (for local testing)
+- Completado las Guías 1-4 (toda la infraestructura de las Partes 1-4)
+- AWS CLI configurado
+- Python con el gestor de paquetes `uv` instalado
+- Terraform instalado
+- Docker Desktop instalado y corriendo (para pruebas locales)
 
-## Step 0: Additional IAM Permissions
+## Paso 0: Permisos IAM adicionales
 
-Since Guide 4, we need additional AWS permissions for Aurora and related services.
+Desde la Guía 4, necesitamos permisos adicionales en AWS para Aurora y servicios asociados.
 
-### Create Custom RDS Policy
+### Crea una Política RDS Personalizada
 
-1. Sign in to the AWS Console as your root user (just for IAM setup)
-2. Navigate to **IAM** → **Policies**
-3. Click **Create policy**
-4. Click the **JSON** tab
-5. Replace the content with:
+1. Inicia sesión en la Consola de AWS como usuario root (solo para la configuración de IAM)
+2. Ve a **IAM** → **Políticas**
+3. Haz clic en **Crear política**
+4. Haz clic en la pestaña **JSON**
+5. Sustituye el contenido por:
 
 ```json
 {
@@ -168,171 +168,171 @@ Since Guide 4, we need additional AWS permissions for Aurora and related service
 }
 ```
 
-6. Click **Next: Tags**, then **Next: Review**
-7. For **Policy name**, enter: `AlexRDSCustomPolicy`
-8. For **Description**, enter: `RDS and Data API permissions for Alex project`
-9. Click **Create policy**
+6. Haz clic en **Siguiente: Etiquetas**, luego **Siguiente: Revisar**
+7. Para **Nombre de la política**, escribe: `AlexRDSCustomPolicy`
+8. Para **Descripción**, escribe: `RDS and Data API permissions for Alex project`
+9. Haz clic en **Crear política**
 
-### Add Required AWS Managed Policies
+### Agregar Políticas Administradas de AWS requeridas
 
-1. Still in IAM, click **User groups** in the left sidebar
-2. Click on the `AlexAccess` group (created in Guide 1)
-3. Click **Permissions** tab, then **Add permissions** → **Attach policies**
-4. Search for and select these AWS managed policies:
+1. Aún en IAM, haz clic en **Grupos de usuarios** en la barra lateral
+2. Haz clic en el grupo `AlexAccess` (creado en la Guía 1)
+3. Haz clic en la pestaña **Permisos**, luego en **Agregar permisos** → **Adjuntar políticas**
+4. Busca y selecciona estas políticas administradas de AWS:
    - `AmazonRDSDataFullAccess`
    - `AWSLambda_FullAccess`
    - `AmazonSQSFullAccess`
    - `AmazonEventBridgeFullAccess`
    - `SecretsManagerReadWrite`
-5. Also select the custom policy you just created:
+5. También selecciona la política personalizada que acabas de crear:
    - `AlexRDSCustomPolicy`
-6. Click **Add permissions**
+6. Haz clic en **Agregar permisos**
 
-### Verify Permissions
+### Verificar Permisos
 
-Sign out and sign back in with your IAM user, then verify:
+Cierra sesión y vuelve a acceder con tu usuario IAM, luego verifica:
 
 ```bash
-# Should return empty list or existing clusters
+# Debería devolver lista vacía o los clústeres existentes
 aws rds describe-db-clusters
 
-# Should show the command exists and list required parameters
+# Debería mostrar que el comando existe y lista los parámetros requeridos
 aws rds-data execute-statement --help
-# You should see: "the following arguments are required: --resource-arn, --secret-arn, --sql"
-# This confirms the Data API commands are available
+# Deberías ver: "the following arguments are required: --resource-arn, --secret-arn, --sql"
+# Esto confirma que los comandos Data API están disponibles
 ```
 
-## Step 1: Deploy Aurora Serverless v2
+## Paso 1: Desplegar Aurora Serverless v2
 
-Now let's deploy the database infrastructure with Terraform.
+Ahora vamos a desplegar la infraestructura de base de datos con Terraform.
 
-### Configure and Deploy the Database
+### Configura y Despliega la Base de Datos
 
 ```bash
-# Starting from the project root (alex directory)
+# Desde la raíz del proyecto (directorio alex)
 cd terraform/5_database
 
-# Copy the example variables file
+# Copia el archivo de variables de ejemplo
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and set your values:
+Edita `terraform.tfvars` y pon tus valores:
 
 ```hcl
-aws_region = "us-east-1"  # Your AWS region
-min_capacity = 0.5        # Minimum ACUs (0.5 = ~$43/month)
-max_capacity = 1.0        # Maximum ACUs (keep low for dev)
+aws_region = "us-east-1"  # Tu región AWS
+min_capacity = 0.5        # ACUs mínimos (0.5 = ~$43/mes)
+max_capacity = 1.0        # ACUs máximos (bajo para desarrollo)
 ```
 
-Deploy the database:
+Despliega la base de datos:
 
 ```bash
-# Initialize Terraform (creates local state file)
+# Inicializa Terraform (crea archivo local de estado)
 terraform init
 
-# Deploy the database infrastructure
+# Despliega la infraestructura de base de datos
 terraform apply
 ```
 
-Type `yes` when prompted. This will create:
+Escribe `yes` cuando se te pida. Esto creará:
 
-- Aurora Serverless v2 cluster with Data API enabled
-- Database credentials in Secrets Manager
-- Security group and subnet configuration
-- The `alex` database
+- Clúster Aurora Serverless v2 con Data API activada
+- Credenciales de base de datos en Secrets Manager
+- Grupo de seguridad y configuración de subredes
+- La base de datos `alex`
 
-Deployment takes about 10-15 minutes. After deployment, Terraform will display important outputs including the cluster ARN and secret ARN.
+El despliegue tarda unos 10-15 minutos. Al finalizar, Terraform mostrará valores importantes como el ARN del clúster y el ARN del secreto.
 
-### Save Your Configuration
+### Guarda tu Configuración
 
-**Important**: Update your `.env` file with the database values:
+**Importante**: Actualiza tu archivo `.env` con los valores de la base de datos:
 
-1. View the Terraform outputs:
+1. Revisa los outputs de Terraform:
 
    ```bash
    terraform output
    ```
 
-2. Edit the `.env` file in your project root:
+2. Edita el archivo `.env` en la raíz de tu proyecto:
 
-   - In Cursor's file explorer, click on the `.env` file in the alex directory
-   - If you don't see it, make sure hidden files are visible (Cmd+Shift+. on Mac, Ctrl+H on Linux/Windows)
+   - En el explorador de archivos de Cursor, haz clic en `.env` en el directorio alex
+   - Si no lo ves, asegúrate de que los archivos ocultos sean visibles (Cmd+Shift+. en Mac, Ctrl+H en Linux/Windows)
 
-3. Add these lines with values from Terraform output:
+3. Añade estas líneas con los valores del output de Terraform:
    ```
-   # Part 5 - Database
+   # Parte 5 - Base de datos
    AURORA_CLUSTER_ARN=arn:aws:rds:us-east-1:123456789012:cluster:alex-aurora-cluster
    AURORA_SECRET_ARN=arn:aws:secretsmanager:us-east-1:123456789012:secret:alex-aurora-credentials-xxxxx
    ```
 
-💡 **Tip**: The exact ARN values are shown in your Terraform output. Copy them carefully!
+💡 **Consejo**: Los valores exactos de ARN se muestran en el output de Terraform. ¡Cópialos cuidadosamente!
 
-## Step 2: Initialize the Database
+## Paso 2: Inicializar la Base de Datos
 
-Now let's test the connection and create our schema.
+Ahora probemos la conexión y creemos nuestro esquema.
 
 ```bash
-# Starting from the project root (alex directory)
+# Desde la raíz del proyecto (directorio alex)
 cd backend/database
 
-# Test the Data API connection
+# Prueba la conexión Data API
 uv run test_data_api.py
 ```
 
-You should see:
+Deberías ver:
 
 ```
-✅ Successfully connected to Aurora using Data API!
+✅ ¡Conectado exitosamente a Aurora usando Data API!
 Database version: PostgreSQL 15.x
 ```
 
-## Step 3: Run Database Migrations
+## Paso 3: Ejecutar Migraciones de Base de Datos
 
-Create the database schema:
+Crea el esquema de la base de datos:
 
 ```bash
-# From backend/database directory
+# Desde el directorio backend/database
 uv run run_migrations.py
 ```
 
-You should see:
+Deberías ver:
 
 ```
 Starting migration: 001_schema.sql
-✅ Migration completed successfully
-All migrations completed!
+✅ Migración completada exitosamente
+¡Todas las migraciones completadas!
 ```
 
-## Step 4: Load Seed Data
+## Paso 4: Cargar Datos de Ejemplo
 
-Now let's populate the instruments table with 22 popular ETFs:
+Ahora vamos a poblar la tabla instruments con 22 ETFs populares:
 
 ```bash
-# From backend/database directory
+# Desde backend/database
 uv run seed_data.py
 ```
 
-You should see:
+Deberías ver:
 
 ```
 Seeding 22 instruments...
 ✅ SPY - SPDR S&P 500 ETF
 ✅ QQQ - Invesco QQQ Trust
 ✅ BND - Vanguard Total Bond Market ETF
-[... more ETFs ...]
+[... más ETFs ...]
 ✅ Successfully seeded 22 instruments
 ```
 
-## Step 5: Create Test Data (Optional)
+## Paso 5: Crear Datos de Prueba (Opcional)
 
-For development, let's create a test user with a sample portfolio:
+Para desarrollo, creemos un usuario de prueba con un portafolio de ejemplo:
 
 ```bash
-# From backend/database directory
+# Desde backend/database
 uv run reset_db.py --with-test-data
 ```
 
-You should see:
+Deberías ver:
 
 ```
 Dropping all tables...
@@ -348,33 +348,32 @@ Test user created:
 - 5 positions in 401k account
 ```
 
-## Step 6: Verify Database Integrity
+## Paso 6: Verificar la Integridad de la Base de Datos
 
-Finally, run the verification script to get a full report on the database's health. This is a valuable check to confirm
-everything is set up correctly before you proceed to Part 6.
+Por último, ejecuta el script de verificación para obtener un reporte completo del estado de la base de datos. Esto es un valioso chequeo para asegurarte de que todo esté correctamente antes de continuar a la Parte 6.
 
 ```bash
-1 # From backend/database directory
+1 # Desde backend/database
 2 uv run verify_database.py
 ```
 
-The script will output a detailed report summarizing table counts, data integrity, and more. The key thing to look for is the
-final confirmation banner at the end of the report:
+El script te dará un reporte detallado resumiendo cantidad de tablas, integridad de los datos y más. Lo clave a verificar es el
+banner final de confirmación al final del reporte:
 
 ```bash
 ---
-🎉 DATABASE VERIFICATION COMPLETE
+🎉 VERIFICACIÓN DE BASE DE DATOS COMPLETADA
 ---
-✅ All tables created successfully
-✅ Instruments loaded with complete allocation data
-✅ All allocation percentages sum to 100%
-✅ Indexes and triggers are in place
-✅ Database is ready for Part 6: Agent Orchestra!
+✅ Todas las tablas creadas exitosamente
+✅ Instrumentos cargados con datos completos de asignación
+✅ Todos los porcentajes de asignación suman 100%
+✅ Índices y triggers presentes
+✅ ¡Base de datos lista para la Parte 6: Orquesta de Agentes!
 ```
 
-## Understanding the Database Schema
+## Entendiendo el Esquema de la Base de Datos
 
-Our schema includes five tables with clear separation between user-specific and shared reference data:
+Nuestro esquema incluye cinco tablas con separación clara entre datos específicos de usuario y datos compartidos de referencia:
 
 ```mermaid
 erDiagram
@@ -435,125 +434,125 @@ erDiagram
     }
 ```
 
-### Table Descriptions
+### Descripción de Tablas
 
-- **users**: Minimal user data (Clerk handles auth)
-- **instruments**: ETFs, stocks, and funds with current prices and allocation data (shared reference data)
-- **accounts**: User's investment accounts (401k, IRA, etc.)
-- **positions**: Holdings in each account
-- **jobs**: Async job tracking for analysis requests with separate fields for each agent's output:
-  - `report_payload`: Reporter agent's markdown analysis
-  - `charts_payload`: Charter agent's visualization data
-  - `retirement_payload`: Retirement agent's projections
-  - `summary_payload`: Planner's final summary and metadata
+- **users**: Datos básicos del usuario (Clerk maneja la autenticación)
+- **instruments**: ETFs, acciones y fondos con precios actuales y datos de asignación (datos de referencia compartidos)
+- **accounts**: Cuentas de inversión del usuario (401k, IRA, etc.)
+- **positions**: Posesiones en cada cuenta
+- **jobs**: Seguimiento asíncrono de análisis, con campos separados para la salida de cada agente:
+  - `report_payload`: Análisis en markdown del agente Reporter
+  - `charts_payload`: Datos de visualización de Charter
+  - `retirement_payload`: Proyecciones del agente Retirement
+  - `summary_payload`: Resumen final y metadatos del agente Planner
 
-All data is validated through Pydantic schemas before database insertion, ensuring data integrity. Each agent writes its results to its own dedicated JSONB field in the `jobs` table, eliminating the need for complex merging logic. Agent execution tracking is handled by LangFuse and CloudWatch Logs, not in the database.
+Todos los datos se validan mediante esquemas Pydantic antes de insertarse en la base de datos, asegurando integridad. Cada agente escribe sus resultados en su propio campo JSONB dedicado en la tabla `jobs`, eliminando la necesidad de lógica compleja de fusiones. El seguimiento de ejecución de agentes se maneja con LangFuse y CloudWatch Logs, no en la base de datos.
 
-## Cost Management
+## Gestión de Costes
 
-Aurora Serverless v2 costs approximately:
+Aurora Serverless v2 cuesta aproximadamente:
 
-- **Minimum capacity (0.5 ACU)**: ~$43/month
-- **Running normally**: $1.44-$2.88/day
+- **Capacidad mínima (0.5 ACU)**: ~$43/mes
+- **Funcionamiento normal**: $1.44-$2.88/día
 
-### Managing Costs
+### Gestión de Costes
 
-To minimize costs when not actively developing:
+Para minimizar costes cuando no estés desarrollando:
 
 ```bash
-# To completely destroy the database and stop all charges:
+# Para destruir completamente la base de datos y parar todos los cargos:
 cd terraform/5_database
 terraform destroy
 
-# To recreate the database later:
+# Para crear de nuevo la base de datos después:
 terraform apply
 ```
 
-⚠️ **Warning**: `terraform destroy` will delete your database and all data. Only do this when you're done with development or taking a break.
+⚠️ **Advertencia**: `terraform destroy` eliminará por completo la base de datos y todos los datos. Hazlo solo cuando hayas acabado el desarrollo o vayas a pausar.
 
-**Recommendation**: Complete Parts 5-8 within 3-5 days, then destroy to avoid ongoing charges.
+**Recomendación**: Completa las Partes 5-8 en 3-5 días y luego destruye para evitar costes adicionales.
 
-## Troubleshooting
+## Solución de Problemas
 
-### Data API Connection Issues
+### Problemas de Conexión con Data API
 
-If you can't connect to the Data API:
+Si no puedes conectar con la Data API:
 
-1. **Check cluster status**:
+1. **Comprueba el estado del clúster**:
 
 ```bash
 aws rds describe-db-clusters --db-cluster-identifier alex-aurora-cluster
 ```
 
-Status should be "available"
+El estado debe ser "available"
 
-2. **Check Data API is enabled**:
+2. **Comprueba si la Data API está activa**:
 
 ```bash
 aws rds describe-db-clusters --db-cluster-identifier alex-aurora-cluster --query 'DBClusters[0].EnableHttpEndpoint'
 ```
 
-Should return `true`
+Debe devolver `true`
 
-3. **Verify secrets** (the secret name includes a random suffix):
+3. **Verifica los secretos** (el nombre del secreto tiene un sufijo aleatorio):
 
 ```bash
-# List all secrets to find the correct name
+# Lista todos los secretos para encontrar el nombre correcto
 aws secretsmanager list-secrets --query "SecretList[?contains(Name, 'alex-aurora-credentials')].Name"
 
-# Then get the secret value (replace with actual name from above)
+# Después, obtiene el valor del secreto (reemplaza por el nombre real de arriba)
 aws secretsmanager get-secret-value --secret-id alex-aurora-credentials-xxxxx --query SecretString --output text | jq .
 ```
 
-Should show username and password
+Debe mostrar usuario y contraseña
 
-### Migration Failures
+### Fallos en Migraciones
 
-If migrations fail:
+Si las migraciones fallan:
 
-1. **Check SQL syntax**:
+1. **Revisa la sintaxis SQL**:
 
 ```bash
-# From the backend/database directory
-# Migrations are in the migrations subdirectory
+# Desde backend/database
+# Las migraciones están en el subdirectorio migrations
 cat migrations/001_schema.sql
 ```
 
-2. **Reset and retry**:
+2. **Reinicia y reintenta**:
 
 ```bash
-# From the backend/database directory
+# Desde backend/database
 uv run reset_db.py
-# This will drop all tables, run migrations, and reload seed data
+# Esto eliminará todas las tablas, ejecutará migraciones y recargará datos de ejemplo
 ```
 
-### Pydantic Validation Errors
+### Errores de Validación en Pydantic
 
-If you see validation errors:
+Si ves errores de validación:
 
-1. **Check allocation sums**:
-   All allocation dictionaries must sum to 100.0
+1. **Comprueba la suma de asignaciones**:
+   Todos los diccionarios de asignación deben sumar 100.0
 
-2. **Check Literal types**:
-   Only use allowed values for regions, sectors, and asset classes
+2. **Revisa los tipos Literal**:
+   Usa solo los valores permitidos para regiones, sectores y clases de activos
 
-3. **Review schema definitions**:
+3. **Revisa las definiciones de esquema**:
 
 ```bash
-# From the backend/database directory
+# Desde backend/database
 cat src/schemas.py
 ```
 
-## Next Steps
+## Próximos Pasos
 
-Excellent! You now have a production-grade database with:
+¡Excelente! Ahora tienes una base de datos de nivel producción con:
 
-- ✅ Aurora Serverless v2 with Data API (no VPC complexity!)
-- ✅ Complete schema for financial data
-- ✅ Pydantic validation for all data
-- ✅ 22 ETFs with allocation data
-- ✅ Shared database package for all agents
+- ✅ Aurora Serverless v2 con Data API (¡sin complejidad de VPC!)
+- ✅ Esquema completo para datos financieros
+- ✅ Validación con Pydantic para todos los datos
+- ✅ 22 ETFs con datos de composición
+- ✅ Paquete de base de datos compartido para todos los agentes
 
-Continue to [6_agents.md](6_agents.md) where we'll build the AI agent orchestra that uses this database to provide comprehensive financial analysis!
+Continúa con [6_agents.md](6_agents.md) donde construiremos la orquesta de agentes de IA que usará esta base de datos para brindar análisis financiero completo.
 
-Your database is ready and waiting for the agents! 🚀
+¡Tu base de datos está lista y esperando a los agentes! 🚀
