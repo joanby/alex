@@ -1,5 +1,5 @@
 """
-Test market data fetching
+Test de obtención de datos de mercado
 """
 
 from src import Database
@@ -8,19 +8,19 @@ from market import update_instrument_prices
 def test_market():
     db = Database()
 
-    # Find a user with positions
+    # Buscar un usuario con posiciones
     user_id = 'user_30BmVRQvPMVcGt9kWAH4BOy5Cjy'
 
-    # Create a test job
+    # Crear un job de prueba
     job_id = db.jobs.create_job(
         clerk_user_id=user_id,
         job_type='test_market',
         request_payload={'test': True}
     )
 
-    print(f"Testing market data fetch for job {job_id}")
+    print(f"Probando la obtención de datos de mercado para el job {job_id}")
 
-    # Get initial prices
+    # Obtener precios iniciales
     accounts = db.accounts.find_by_user(user_id)
     symbols = set()
     for account in accounts:
@@ -29,23 +29,23 @@ def test_market():
             symbols.add(position['symbol'])
             instrument = db.instruments.find_by_symbol(position['symbol'])
             if instrument:
-                print(f"  {position['symbol']}: Current price = ${instrument.get('current_price')}")
+                print(f"  {position['symbol']}: Precio actual = ${instrument.get('current_price')}")
 
-    print(f"\nFetching prices for {len(symbols)} symbols...")
+    print(f"\nObteniendo precios para {len(symbols)} símbolos...")
 
-    # Update prices
+    # Actualizar precios
     update_instrument_prices(job_id, db)
 
-    print("\nAfter update:")
-    # Check updated prices
+    print("\nDespués de la actualización:")
+    # Comprobar los precios actualizados
     for symbol in symbols:
         instrument = db.instruments.find_by_symbol(symbol)
         if instrument:
-            print(f"  {symbol}: Current price = ${instrument.get('current_price')}")
+            print(f"  {symbol}: Precio actual = ${instrument.get('current_price')}")
 
-    # Clean up
+    # Limpiar
     db.jobs.delete(job_id)
-    print(f"\nDeleted test job {job_id}")
+    print(f"\nJob de prueba {job_id} eliminado")
 
 if __name__ == "__main__":
     test_market()

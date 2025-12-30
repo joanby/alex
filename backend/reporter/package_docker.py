@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Package the Reporter Lambda function using Docker for AWS compatibility.
+Empaqueta la función Lambda Reporter usando Docker para compatibilidad con AWS.
 """
 
 import os
@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 def run_command(cmd, cwd=None):
-    """Run a command and capture output."""
-    print(f"Running: {' '.join(cmd)}")
+    """Ejecuta un comando y captura la salida."""
+    print(f"Ejecutando: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error: {result.stderr}")
@@ -23,39 +23,39 @@ def run_command(cmd, cwd=None):
 
 
 def package_lambda():
-    """Package the Lambda function with all dependencies."""
+    """Empaqueta la función Lambda con todas sus dependencias."""
 
-    # Get the directory containing this script
+    # Obtiene el directorio que contiene este script
     reporter_dir = Path(__file__).parent.absolute()
     backend_dir = reporter_dir.parent
 
-    # Create a temporary directory for packaging
+    # Crea un directorio temporal para hacer el empaquetado
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         package_dir = temp_path / "package"
         package_dir.mkdir()
 
-        print("Creating Lambda package using Docker...")
+        print("Creando paquete Lambda usando Docker...")
 
-        # Export exact requirements from uv.lock (excluding the editable database package)
-        print("Exporting requirements from uv.lock...")
+        # Exporta los requisitos exactos desde uv.lock (excluyendo el paquete editable 'database')
+        print("Exportando requisitos desde uv.lock...")
         requirements_result = run_command(
             ["uv", "export", "--no-hashes", "--no-emit-project"], cwd=str(reporter_dir)
         )
 
-        # Filter out packages that don't work in Lambda
+        # Filtra los paquetes que no funcionan en Lambda
         filtered_requirements = []
         for line in requirements_result.splitlines():
-            # Skip pyperclip (clipboard library not needed in Lambda)
+            # Omite pyperclip (librería de portapapeles no necesaria en Lambda)
             if line.startswith("pyperclip"):
-                print(f"Excluding from Lambda: {line}")
+                print(f"Excluyendo de Lambda: {line}")
                 continue
             filtered_requirements.append(line)
 
         req_file = temp_path / "requirements.txt"
         req_file.write_text("\n".join(filtered_requirements))
 
-        # Use Docker to install dependencies for Lambda's architecture
+        # Usa Docker para instalar las dependencias para la arquitectura de Lambda
         docker_cmd = [
             "docker",
             "run",
@@ -75,72 +75,72 @@ def package_lambda():
 
         run_command(docker_cmd)
 
-        # Copy Lambda handler, agent, templates, and observability
+        # Copia el handler de Lambda, agent, templates y observabilidad
         shutil.copy(reporter_dir / "lambda_handler.py", package_dir)
         shutil.copy(reporter_dir / "agent.py", package_dir)
         shutil.copy(reporter_dir / "templates.py", package_dir)
         shutil.copy(reporter_dir / "observability.py", package_dir)
         shutil.copy(reporter_dir / "judge.py", package_dir)
 
-        # Create the zip file
+        # Crea el archivo zip
         zip_path = reporter_dir / "reporter_lambda.zip"
 
-        # Remove old zip if it exists
+        # Elimina el zip antiguo si existe
         if zip_path.exists():
             zip_path.unlink()
 
-        # Create new zip
-        print(f"Creating zip file: {zip_path}")
+        # Crea nuevo zip
+        print(f"Creando archivo zip: {zip_path}")
         run_command(["zip", "-r", str(zip_path), "."], cwd=str(package_dir))
 
-        # Get file size
+        # Obtiene el tamaño del archivo
         size_mb = zip_path.stat().st_size / (1024 * 1024)
-        print(f"Package created: {zip_path} ({size_mb:.1f} MB)")
+        print(f"Paquete creado: {zip_path} ({size_mb:.1f} MB)")
 
         return zip_path
 
 
 def deploy_lambda(zip_path):
-    """Deploy the Lambda function to AWS."""
+    """Despliega la función Lambda en AWS."""
     import boto3
 
     lambda_client = boto3.client("lambda")
     function_name = "alex-reporter"
 
-    print(f"Deploying to Lambda function: {function_name}")
+    print(f"Desplegando en la función Lambda: {function_name}")
 
     try:
-        # Try to update existing function
+        # Intenta actualizar la función existente
         with open(zip_path, "rb") as f:
             response = lambda_client.update_function_code(
                 FunctionName=function_name, ZipFile=f.read()
             )
-        print(f"Successfully updated Lambda function: {function_name}")
-        print(f"Function ARN: {response['FunctionArn']}")
+        print(f"Función Lambda actualizada correctamente: {function_name}")
+        print(f"ARN de la función: {response['FunctionArn']}")
     except lambda_client.exceptions.ResourceNotFoundException:
-        print(f"Lambda function {function_name} not found. Please deploy via Terraform first.")
+        print(f"La función Lambda {function_name} no fue encontrada. Por favor, despliega primero vía Terraform.")
         sys.exit(1)
     except Exception as e:
-        print(f"Error deploying Lambda: {e}")
+        print(f"Error al desplegar Lambda: {e}")
         sys.exit(1)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Package Reporter Lambda for deployment")
-    parser.add_argument("--deploy", action="store_true", help="Deploy to AWS after packaging")
+    parser = argparse.ArgumentParser(description="Empaqueta Reporter Lambda para despliegue")
+    parser.add_argument("--deploy", action="store_true", help="Desplegar en AWS después de empaquetar")
     args = parser.parse_args()
 
-    # Check if Docker is available
+    # Comprueba si Docker está disponible
     try:
         run_command(["docker", "--version"])
     except FileNotFoundError:
-        print("Error: Docker is not installed or not in PATH")
+        print("Error: Docker no está instalado o no está en el PATH")
         sys.exit(1)
 
-    # Package the Lambda
+    # Empaqueta la Lambda
     zip_path = package_lambda()
 
-    # Deploy if requested
+    # Despliega si se solicita
     if args.deploy:
         deploy_lambda(zip_path)
 

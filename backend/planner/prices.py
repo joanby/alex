@@ -21,7 +21,7 @@ def is_market_open() -> bool:
 
 
 def get_all_share_prices_polygon_eod() -> dict[str, float]:
-    """With much thanks to student Reema R. for fixing the timezone issue with this!"""
+    """Con mucho agradecimiento a la estudiante Reema R. por solucionar el problema de la zona horaria en esto!"""
     client = RESTClient(polygon_api_key)
 
     probe = client.get_previous_close_agg("SPY")[0]
@@ -61,5 +61,5 @@ def get_share_price(symbol) -> float:
         try:
             return get_share_price_polygon(symbol)
         except Exception as e:
-            print(f"Was not able to use the polygon API due to {e}; using a random number")
+            print(f"No se pudo usar la API de polygon debido a {e}; usando un número aleatorio")
     return float(random.randint(1, 100))

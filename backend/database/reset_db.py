@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Database Reset Script
-Drops all tables, recreates schema, and loads seed data
+Script de Reinicio de la Base de Datos
+Elimina todas las tablas, recrea el esquema y carga datos semilla
 """
 
 import sys
@@ -14,10 +14,10 @@ from decimal import Decimal
 
 
 def drop_all_tables(db: DataAPIClient):
-    """Drop all tables in correct order (respecting foreign keys)"""
-    print("🗑️  Dropping existing tables...")
+    """Elimina todas las tablas en el orden correcto (respetando claves foráneas)"""
+    print("🗑️  Eliminando tablas existentes...")
     
-    # Order matters due to foreign key constraints
+    # El orden importa debido a las restricciones de claves foráneas
     tables_to_drop = [
         'positions',
         'accounts',
@@ -29,23 +29,23 @@ def drop_all_tables(db: DataAPIClient):
     for table in tables_to_drop:
         try:
             db.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
-            print(f"   ✅ Dropped {table}")
+            print(f"   ✅ Tabla eliminada {table}")
         except Exception as e:
-            print(f"   ⚠️  Error dropping {table}: {e}")
+            print(f"   ⚠️  Error al eliminar {table}: {e}")
     
-    # Also drop the function
+    # También eliminar la función
     try:
         db.execute("DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE")
-        print(f"   ✅ Dropped update_updated_at_column function")
+        print(f"   ✅ Función update_updated_at_column eliminada")
     except Exception as e:
-        print(f"   ⚠️  Error dropping function: {e}")
+        print(f"   ⚠️  Error al eliminar la función: {e}")
 
 
 def create_test_data(db_models: Database):
-    """Create test user with sample portfolio"""
-    print("\n👤 Creating test user and portfolio...")
+    """Crear usuario de prueba con portafolio de muestra"""
+    print("\n👤 Creando usuario de prueba y portafolio...")
     
-    # Create test user with Pydantic validation
+    # Crear usuario de prueba con validación Pydantic
     user_data = UserCreate(
         clerk_user_id='test_user_001',
         display_name='Test User',
@@ -53,12 +53,12 @@ def create_test_data(db_models: Database):
         target_retirement_income=Decimal('100000')
     )
     
-    # Check if user exists
+    # Verificar si existe el usuario
     existing = db_models.users.find_by_clerk_id('test_user_001')
     if existing:
-        print("   ℹ️  Test user already exists")
+        print("   ℹ️  El usuario de prueba ya existe")
     else:
-        # Use validated data from Pydantic model
+        # Usar datos validados del modelo Pydantic
         validated = user_data.model_dump()
         db_models.users.create_user(
             clerk_user_id=validated['clerk_user_id'],
@@ -66,25 +66,25 @@ def create_test_data(db_models: Database):
             years_until_retirement=validated['years_until_retirement'],
             target_retirement_income=validated['target_retirement_income']
         )
-        print("   ✅ Created test user")
+        print("   ✅ Usuario de prueba creado")
     
-    # Create test accounts with Pydantic validation
+    # Crear cuentas de prueba con validación Pydantic
     accounts = [
         AccountCreate(
             account_name='401(k)',
-            account_purpose='Primary retirement savings',
+            account_purpose='Ahorro principal para la jubilación',
             cash_balance=Decimal('5000'),
             cash_interest=Decimal('0.045')
         ),
         AccountCreate(
             account_name='Roth IRA',
-            account_purpose='Tax-free retirement savings',
+            account_purpose='Ahorro para jubilación libre de impuestos',
             cash_balance=Decimal('1000'),
             cash_interest=Decimal('0.04')
         ),
         AccountCreate(
             account_name='Taxable Brokerage',
-            account_purpose='General investment account',
+            account_purpose='Cuenta de inversión general',
             cash_balance=Decimal('2500'),
             cash_interest=Decimal('0.035')
         )
@@ -93,7 +93,7 @@ def create_test_data(db_models: Database):
     user_accounts = db_models.accounts.find_by_user('test_user_001')
     
     if user_accounts:
-        print(f"   ℹ️  User already has {len(user_accounts)} accounts")
+        print(f"   ℹ️  El usuario ya tiene {len(user_accounts)} cuentas")
         account_ids = [acc['id'] for acc in user_accounts]
     else:
         account_ids = []
@@ -107,26 +107,26 @@ def create_test_data(db_models: Database):
                 cash_interest=validated['cash_interest']
             )
             account_ids.append(acc_id)
-            print(f"   ✅ Created account: {validated['account_name']}")
+            print(f"   ✅ Cuenta creada: {validated['account_name']}")
     
-    # Create test positions in first account (401k)
+    # Crear posiciones de prueba en la primera cuenta (401k)
     if account_ids:
         positions = [
-            ('SPY', Decimal('100')),   # $45,000 approx
-            ('QQQ', Decimal('50')),    # $20,000 approx
-            ('BND', Decimal('200')),   # $16,000 approx
-            ('VEA', Decimal('150')),   # $7,500 approx
-            ('GLD', Decimal('25')),    # $5,000 approx
+            ('SPY', Decimal('100')),   # $45,000 aprox
+            ('QQQ', Decimal('50')),    # $20,000 aprox
+            ('BND', Decimal('200')),   # $16,000 aprox
+            ('VEA', Decimal('150')),   # $7,500 aprox
+            ('GLD', Decimal('25')),    # $5,000 aprox
         ]
         
         account_id = account_ids[0]
         existing_positions = db_models.positions.find_by_account(account_id)
         
         if existing_positions:
-            print(f"   ℹ️  Account already has {len(existing_positions)} positions")
+            print(f"   ℹ️  La cuenta ya tiene {len(existing_positions)} posiciones")
         else:
             for symbol, quantity in positions:
-                # Validate position with Pydantic
+                # Validar posición con Pydantic
                 position = PositionCreate(
                     account_id=account_id,
                     symbol=symbol,
@@ -138,80 +138,80 @@ def create_test_data(db_models: Database):
                     validated['symbol'],
                     validated['quantity']
                 )
-                print(f"   ✅ Added position: {quantity} shares of {symbol}")
+                print(f"   ✅ Posición agregada: {quantity} acciones de {symbol}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Reset Alex database')
+    parser = argparse.ArgumentParser(description='Reiniciar la base de datos de Alex')
     parser.add_argument('--with-test-data', action='store_true',
-                       help='Create test user with sample portfolio')
+                       help='Crear usuario de prueba con portafolio de muestra')
     parser.add_argument('--skip-drop', action='store_true',
-                       help='Skip dropping tables (just reload data)')
+                       help='Omitir eliminación de tablas (solo recargar datos)')
     args = parser.parse_args()
     
-    print("🚀 Database Reset Script")
+    print("🚀 Script de Reinicio de la Base de Datos")
     print("=" * 50)
     
-    # Initialize database
+    # Inicializar la base de datos
     db = DataAPIClient()
     db_models = Database()
     
     if not args.skip_drop:
-        # Drop all tables
+        # Eliminar todas las tablas
         drop_all_tables(db)
         
-        # Run migrations
-        print("\n📝 Running migrations...")
+        # Ejecutar migraciones
+        print("\n📝 Ejecutando migraciones...")
         import subprocess
         result = subprocess.run(['uv', 'run', 'run_migrations.py'], 
                               capture_output=True, text=True)
         
         if result.returncode != 0:
-            print("❌ Migration failed!")
+            print("❌ ¡Migración fallida!")
             print(result.stderr)
             sys.exit(1)
         else:
-            print("✅ Migrations completed")
+            print("✅ Migraciones completadas")
     
-    # Load seed data
-    print("\n🌱 Loading seed data...")
+    # Cargar datos semilla
+    print("\n🌱 Cargando datos semilla...")
     import subprocess
     result = subprocess.run(['uv', 'run', 'seed_data.py'], 
                           capture_output=True, text=True)
     
     if result.returncode != 0:
-        print("❌ Seed data failed!")
+        print("❌ ¡Error al cargar los datos semilla!")
         print(result.stderr)
         sys.exit(1)
     else:
-        # Extract instrument count from output
+        # Extraer cantidad de instrumentos desde la salida
         if '22/22 instruments loaded' in result.stdout:
-            print("✅ Loaded 22 instruments")
+            print("✅ 22 instrumentos cargados")
         else:
-            print("✅ Seed data loaded")
+            print("✅ Datos semilla cargados")
     
-    # Create test data if requested
+    # Crear datos de prueba si se solicita
     if args.with_test_data:
         create_test_data(db_models)
     
-    # Final verification
-    print("\n🔍 Final verification...")
+    # Verificación final
+    print("\n🔍 Verificación final...")
     
-    # Count records
+    # Contar registros
     tables = ['users', 'instruments', 'accounts', 'positions', 'jobs']
     for table in tables:
         result = db.query(f"SELECT COUNT(*) as count FROM {table}")
         count = result[0]['count'] if result else 0
-        print(f"   • {table}: {count} records")
+        print(f"   • {table}: {count} registros")
     
     print("\n" + "=" * 50)
-    print("✅ Database reset complete!")
+    print("✅ ¡Reinicio de la base de datos completo!")
     
     if args.with_test_data:
-        print("\n📝 Test user created:")
-        print("   • User ID: test_user_001")
-        print("   • 3 accounts (401k, Roth IRA, Taxable)")
-        print("   • 5 positions in 401k account")
+        print("\n📝 Usuario de prueba creado:")
+        print("   • ID de usuario: test_user_001")
+        print("   • 3 cuentas (401k, Roth IRA, Taxable)")
+        print("   • 5 posiciones en la cuenta 401k")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Package the Planner Lambda function using Docker for AWS compatibility.
-Uses the official AWS Lambda Python runtime image to ensure binary compatibility.
+Empaqueta la función Lambda Planner usando Docker para compatibilidad con AWS.
+Utiliza la imagen oficial de runtime de AWS Lambda Python para garantizar la compatibilidad binaria.
 """
 
 import os
@@ -13,8 +13,8 @@ import argparse
 from pathlib import Path
 
 def run_command(cmd, cwd=None):
-    """Run a command and capture output."""
-    print(f"Running: {' '.join(cmd)}")
+    """Ejecuta un comando y captura la salida."""
+    print(f"Ejecutando: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error: {result.stderr}")
@@ -22,43 +22,43 @@ def run_command(cmd, cwd=None):
     return result.stdout
 
 def package_lambda():
-    """Package the Lambda function with all dependencies."""
+    """Empaqueta la función Lambda con todas las dependencias."""
     
-    # Get the directory containing this script
+    # Obtén el directorio que contiene este script
     planner_dir = Path(__file__).parent.absolute()
     backend_dir = planner_dir.parent
     project_root = backend_dir.parent
     
-    # Create a temporary directory for packaging
+    # Crea un directorio temporal para el empaquetado
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         package_dir = temp_path / "package"
         package_dir.mkdir()
         
-        print("Creating Lambda package using Docker...")
+        print("Creando paquete Lambda usando Docker...")
         
-        # Export exact requirements from uv.lock (excluding the editable database package)
-        print("Exporting requirements from uv.lock...")
+        # Exporta los requisitos exactos desde uv.lock (excluyendo el paquete editable de database)
+        print("Exportando requisitos desde uv.lock...")
         requirements_result = run_command(
             ["uv", "export", "--no-hashes", "--no-emit-project"],
             cwd=str(planner_dir)
         )
 
-        # Filter out packages that don't work in Lambda
+        # Filtra los paquetes que no funcionan en Lambda
         filtered_requirements = []
         for line in requirements_result.splitlines():
-            # Skip pyperclip (clipboard library not needed in Lambda)
+            # Omitir pyperclip (librería de portapapeles no necesaria en Lambda)
             if line.startswith("pyperclip"):
-                print(f"Excluding from Lambda: {line}")
+                print(f"Excluyendo de Lambda: {line}")
                 continue
             filtered_requirements.append(line)
 
         req_file = temp_path / "requirements.txt"
         req_file.write_text("\n".join(filtered_requirements))
         
-        # Use Docker to install dependencies for Lambda's architecture
-        # The --no-emit-project excludes the current project from requirements
-        # We still need to manually install the database package
+        # Usa Docker para instalar dependencias para la arquitectura de Lambda
+        # El parámetro --no-emit-project excluye el proyecto actual de los requisitos
+        # Aún es necesario instalar manualmente el paquete de database
         docker_cmd = [
             "docker", "run", "--rm",
             "--platform", "linux/amd64",
@@ -72,7 +72,7 @@ def package_lambda():
         
         run_command(docker_cmd)
         
-        # Copy Lambda handler and Python modules
+        # Copia el handler de Lambda y los módulos de Python
         shutil.copy(planner_dir / "lambda_handler.py", package_dir)
         shutil.copy(planner_dir / "agent.py", package_dir)
         shutil.copy(planner_dir / "templates.py", package_dir)
@@ -80,67 +80,67 @@ def package_lambda():
         shutil.copy(planner_dir / "prices.py", package_dir)
         shutil.copy(planner_dir / "observability.py", package_dir)
         
-        # Create the zip file
+        # Crea el archivo zip
         zip_path = planner_dir / "planner_lambda.zip"
         
-        # Remove old zip if it exists
+        # Elimina el zip antiguo si existe
         if zip_path.exists():
             zip_path.unlink()
         
-        # Create new zip
-        print(f"Creating zip file: {zip_path}")
+        # Crea un nuevo zip
+        print(f"Creando archivo zip: {zip_path}")
         run_command(
             ["zip", "-r", str(zip_path), "."],
             cwd=str(package_dir)
         )
         
-        # Get file size
+        # Obtiene el tamaño del archivo
         size_mb = zip_path.stat().st_size / (1024 * 1024)
-        print(f"Package created: {zip_path} ({size_mb:.1f} MB)")
+        print(f"Paquete creado: {zip_path} ({size_mb:.1f} MB)")
         
         return zip_path
 
 def deploy_lambda(zip_path):
-    """Deploy the Lambda function to AWS."""
+    """Despliega la función Lambda en AWS."""
     import boto3
     
     lambda_client = boto3.client('lambda')
     function_name = 'alex-planner'
     
-    print(f"Deploying to Lambda function: {function_name}")
+    print(f"Desplegando en la función Lambda: {function_name}")
     
     try:
-        # Try to update existing function
+        # Intenta actualizar la función existente
         with open(zip_path, 'rb') as f:
             response = lambda_client.update_function_code(
                 FunctionName=function_name,
                 ZipFile=f.read()
             )
-        print(f"Successfully updated Lambda function: {function_name}")
-        print(f"Function ARN: {response['FunctionArn']}")
+        print(f"Función Lambda actualizada correctamente: {function_name}")
+        print(f"ARN de la función: {response['FunctionArn']}")
     except lambda_client.exceptions.ResourceNotFoundException:
-        print(f"Lambda function {function_name} not found. Please deploy via Terraform first.")
+        print(f"La función Lambda {function_name} no se encontró. Por favor, despliega primero mediante Terraform.")
         sys.exit(1)
     except Exception as e:
-        print(f"Error deploying Lambda: {e}")
+        print(f"Error al desplegar Lambda: {e}")
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description='Package Planner Lambda for deployment')
-    parser.add_argument('--deploy', action='store_true', help='Deploy to AWS after packaging')
+    parser = argparse.ArgumentParser(description='Empaqueta Planner Lambda para despliegue')
+    parser.add_argument('--deploy', action='store_true', help='Desplegar en AWS después de empaquetar')
     args = parser.parse_args()
     
-    # Check if Docker is available
+    # Comprueba si Docker está disponible
     try:
         run_command(["docker", "--version"])
     except FileNotFoundError:
-        print("Error: Docker is not installed or not in PATH")
+        print("Error: Docker no está instalado o no está en PATH")
         sys.exit(1)
     
-    # Package the Lambda
+    # Empaqueta la Lambda
     zip_path = package_lambda()
     
-    # Deploy if requested
+    # Despliega si se solicita
     if args.deploy:
         deploy_lambda(zip_path)
 

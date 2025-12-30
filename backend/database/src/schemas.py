@@ -1,6 +1,6 @@
 """
-Pydantic schemas for data validation and LLM tool interfaces
-These models serve as both database validation and LLM structured output schemas
+Esquemas Pydantic para validación de datos e interfaces de herramientas LLM
+Estos modelos sirven tanto para la validación de la base de datos como para los esquemas de salida estructurada de LLM
 """
 
 from typing import Dict, Literal, Optional, List
@@ -9,7 +9,7 @@ from decimal import Decimal
 from datetime import date, datetime
 
 
-# Define allowed values as Literals for LLM compatibility
+# Define valores permitidos como Literals para compatibilidad con LLM
 RegionType = Literal[
     "north_america",
     "europe",
@@ -19,7 +19,7 @@ RegionType = Literal[
     "middle_east",
     "oceania",
     "global",
-    "international",  # For mixed non-US
+    "international",  # Para mezclas no estadounidenses
 ]
 
 AssetClassType = Literal[
@@ -66,23 +66,23 @@ AccountType = Literal[
 
 
 class AllocationDict(BaseModel):
-    """Base class for allocation dictionaries ensuring they sum to 100"""
+    """Clase base para diccionarios de asignación asegurando que sumen 100"""
 
     @field_validator("*", mode="after")
     def validate_sum(cls, v, info):
-        """Ensure allocation percentages sum to 100"""
+        """Asegurar que los porcentajes de asignación sumen 100"""
         if isinstance(v, dict):
             total = sum(v.values())
-            if abs(total - 100) > 3:  # Allow small floating point errors
-                raise ValueError(f"Allocations must sum to 100, got {total}")
+            if abs(total - 100) > 3:  # Permitir pequeños errores de punto flotante
+                raise ValueError(f"Las asignaciones deben sumar 100, se obtuvo {total}")
         return v
 
 
 class RegionAllocation(BaseModel):
-    """Geographic allocation of an instrument"""
+    """Asignación geográfica de un instrumento"""
 
     allocations: Dict[RegionType, float] = Field(
-        description="Percentage allocation by geographic region. Must sum to 100.",
+        description="Porcentaje de asignación por región geográfica. Debe sumar 100.",
         example={"north_america": 60, "europe": 25, "asia": 15},
     )
 
@@ -90,15 +90,15 @@ class RegionAllocation(BaseModel):
     def validate_sum(cls, v):
         total = sum(v.values())
         if abs(total - 100) > 3:
-            raise ValueError(f"Region allocations must sum to 100, got {total}")
+            raise ValueError(f"Las asignaciones regionales deben sumar 100, se obtuvo {total}")
         return v
 
 
 class AssetClassAllocation(BaseModel):
-    """Asset class allocation of an instrument"""
+    """Asignación por clase de activo de un instrumento"""
 
     allocations: Dict[AssetClassType, float] = Field(
-        description="Percentage allocation by asset class. Must sum to 100.",
+        description="Porcentaje de asignación por clase de activo. Debe sumar 100.",
         example={"equity": 80, "fixed_income": 20},
     )
 
@@ -106,15 +106,15 @@ class AssetClassAllocation(BaseModel):
     def validate_sum(cls, v):
         total = sum(v.values())
         if abs(total - 100) > 3:
-            raise ValueError(f"Asset class allocations must sum to 100, got {total}")
+            raise ValueError(f"Las asignaciones de clase de activo deben sumar 100, se obtuvo {total}")
         return v
 
 
 class SectorAllocation(BaseModel):
-    """Sector allocation of an instrument"""
+    """Asignación sectorial de un instrumento"""
 
     allocations: Dict[SectorType, float] = Field(
-        description="Percentage allocation by market sector. Must sum to 100.",
+        description="Porcentaje de asignación por sector de mercado. Debe sumar 100.",
         example={"technology": 30, "healthcare": 25, "financials": 20, "other": 25},
     )
 
@@ -122,93 +122,93 @@ class SectorAllocation(BaseModel):
     def validate_sum(cls, v):
         total = sum(v.values())
         if abs(total - 100) > 3:
-            raise ValueError(f"Sector allocations must sum to 100, got {total}")
+            raise ValueError(f"Las asignaciones sectoriales deben sumar 100, se obtuvo {total}")
         return v
 
 
 class InstrumentCreate(BaseModel):
-    """Schema for creating a new instrument - suitable for LLM tool input"""
+    """Esquema para crear un nuevo instrumento - adecuado para entrada de herramienta LLM"""
 
     symbol: str = Field(
-        description="The ticker symbol of the instrument (e.g., 'SPY', 'BND')",
+        description="El símbolo bursátil del instrumento (p. ej., 'SPY', 'BND')",
         min_length=1,
         max_length=20,
     )
-    name: str = Field(description="Full name of the instrument", min_length=1, max_length=255)
-    instrument_type: InstrumentType = Field(description="The type of financial instrument")
+    name: str = Field(description="Nombre completo del instrumento", min_length=1, max_length=255)
+    instrument_type: InstrumentType = Field(description="El tipo de instrumento financiero")
     current_price: Optional[Decimal] = Field(
         None,
-        description="Current price of the instrument for portfolio calculations",
+        description="Precio actual del instrumento para cálculos de portafolio",
         ge=0,
         le=999999,
     )
     allocation_regions: Dict[RegionType, float] = Field(
-        description="Geographic allocation percentages. Must sum to 100.",
+        description="Porcentajes de asignación geográfica. Deben sumar 100.",
         example={"north_america": 100},
     )
     allocation_sectors: Dict[SectorType, float] = Field(
-        description="Sector allocation percentages. Must sum to 100.",
+        description="Porcentajes de asignación sectorial. Deben sumar 100.",
         example={"technology": 40, "healthcare": 30, "financials": 30},
     )
     allocation_asset_class: Dict[AssetClassType, float] = Field(
-        description="Asset class allocation percentages. Must sum to 100.", example={"equity": 100}
+        description="Porcentajes de asignación por clase de activo. Deben sumar 100.", example={"equity": 100}
     )
 
     @field_validator("allocation_regions", "allocation_sectors", "allocation_asset_class")
     def validate_allocations(cls, v):
-        """Ensure all allocations sum to 100"""
+        """Asegurar que todas las asignaciones sumen 100"""
         if not v:
-            raise ValueError("Allocation cannot be empty")
+            raise ValueError("La asignación no puede estar vacía")
         total = sum(v.values())
         if abs(total - 100) > 3:
-            raise ValueError(f"Allocations must sum to 100, got {total}")
+            raise ValueError(f"Las asignaciones deben sumar 100, se obtuvo {total}")
         return v
 
 
 class InstrumentResponse(InstrumentCreate):
-    """Schema for instrument responses from database"""
+    """Esquema para respuestas de instrumentos de la base de datos"""
 
     created_at: datetime
     updated_at: datetime
 
 
 class UserCreate(BaseModel):
-    """Schema for creating a user - suitable for LLM tool input"""
+    """Esquema para crear un usuario - adecuado para entrada de herramienta LLM"""
 
-    clerk_user_id: str = Field(description="Unique identifier from Clerk authentication system")
-    display_name: Optional[str] = Field(None, description="User's display name", max_length=255)
+    clerk_user_id: str = Field(description="Identificador único del sistema de autenticación Clerk")
+    display_name: Optional[str] = Field(None, description="Nombre para mostrar del usuario", max_length=255)
     years_until_retirement: Optional[int] = Field(
-        None, description="Number of years until the user plans to retire", ge=0, le=100
+        None, description="Número de años hasta que el usuario planea jubilarse", ge=0, le=100
     )
     target_retirement_income: Optional[Decimal] = Field(
-        None, description="Annual income goal in retirement (in dollars)", ge=0, decimal_places=2
+        None, description="Ingreso anual objetivo en la jubilación (en dólares)", ge=0, decimal_places=2
     )
     asset_class_targets: Optional[Dict[AssetClassType, float]] = Field(
         default={"equity": 70, "fixed_income": 30},
-        description="Target allocation percentages for rebalancing. Must sum to 100.",
+        description="Porcentajes de asignación objetivo para rebalanceo. Deben sumar 100.",
     )
     region_targets: Optional[Dict[RegionType, float]] = Field(
         default={"north_america": 50, "international": 50},
-        description="Target geographic allocation for rebalancing. Must sum to 100.",
+        description="Asignación geográfica objetivo para rebalanceo. Debe sumar 100.",
     )
 
 
 class AccountCreate(BaseModel):
-    """Schema for creating an account - suitable for LLM tool input"""
+    """Esquema para crear una cuenta - adecuado para entrada de herramienta LLM"""
 
     account_name: str = Field(
-        description="Name of the account (e.g., '401k', 'Roth IRA')", min_length=1, max_length=255
+        description="Nombre de la cuenta (p.ej., '401k', 'Roth IRA')", min_length=1, max_length=255
     )
-    account_purpose: Optional[str] = Field(None, description="Purpose or goal of this account")
+    account_purpose: Optional[str] = Field(None, description="Propósito u objetivo de esta cuenta")
     cash_balance: Decimal = Field(
         default=Decimal("0"),
-        description="Uninvested cash balance in the account",
+        description="Saldo en efectivo no invertido de la cuenta",
         ge=0,
         decimal_places=2,
     )
     cash_interest: Decimal = Field(
         default=Decimal("0"),
-        description="Annual interest rate on cash (e.g., 0.045 for 4.5%)",
+        description="Tasa de interés anual sobre el efectivo (p.ej., 0.045 para 4.5%)",
         ge=0,
         le=1,
         decimal_places=4,
@@ -216,69 +216,69 @@ class AccountCreate(BaseModel):
 
 
 class PositionCreate(BaseModel):
-    """Schema for creating a position - suitable for LLM tool input"""
+    """Esquema para crear una posición - adecuado para entrada de herramienta LLM"""
 
-    account_id: str = Field(description="UUID of the account holding this position")
-    symbol: str = Field(description="Ticker symbol of the instrument", min_length=1, max_length=20)
+    account_id: str = Field(description="UUID de la cuenta que sostiene esta posición")
+    symbol: str = Field(description="Símbolo bursátil del instrumento", min_length=1, max_length=20)
     quantity: Decimal = Field(
-        description="Number of shares (supports fractional shares)", gt=0, decimal_places=8
+        description="Número de acciones (soporta acciones fraccionarias)", gt=0, decimal_places=8
     )
     as_of_date: Optional[date] = Field(
-        default_factory=date.today, description="Date of this position snapshot"
+        default_factory=date.today, description="Fecha de este snapshot de la posición"
     )
 
 
 class JobCreate(BaseModel):
-    """Schema for creating a job - suitable for LLM tool input"""
+    """Esquema para crear un trabajo - adecuado para entrada de herramienta LLM"""
 
-    clerk_user_id: str = Field(description="User requesting this job")
-    job_type: JobType = Field(description="Type of analysis or operation to perform")
-    request_payload: Optional[Dict] = Field(None, description="Input parameters for the job")
+    clerk_user_id: str = Field(description="Usuario que solicita este trabajo")
+    job_type: JobType = Field(description="Tipo de análisis u operación a realizar")
+    request_payload: Optional[Dict] = Field(None, description="Parámetros de entrada para el trabajo")
 
 
 class JobUpdate(BaseModel):
-    """Schema for updating job status - suitable for LLM tool output"""
+    """Esquema para actualizar el estado del trabajo - adecuado para salida de herramienta LLM"""
 
-    status: JobStatus = Field(description="Current status of the job")
-    result_payload: Optional[Dict] = Field(None, description="Results of the completed job")
-    error_message: Optional[str] = Field(None, description="Error details if job failed")
+    status: JobStatus = Field(description="Estado actual del trabajo")
+    result_payload: Optional[Dict] = Field(None, description="Resultados del trabajo completado")
+    error_message: Optional[str] = Field(None, description="Detalles del error si el trabajo falló")
 
 
 class PortfolioAnalysis(BaseModel):
-    """Schema for portfolio analysis results - LLM structured output"""
+    """Esquema para los resultados del análisis de portafolio - salida estructurada LLM"""
 
-    total_value: Decimal = Field(description="Total portfolio value in dollars", decimal_places=2)
+    total_value: Decimal = Field(description="Valor total del portafolio en dólares", decimal_places=2)
     asset_allocation: Dict[AssetClassType, float] = Field(
-        description="Current asset class allocation percentages"
+        description="Porcentajes actuales de asignación por clase de activo"
     )
     region_allocation: Dict[RegionType, float] = Field(
-        description="Current geographic allocation percentages"
+        description="Porcentajes actuales de asignación geográfica"
     )
     sector_allocation: Dict[SectorType, float] = Field(
-        description="Current sector allocation percentages"
+        description="Porcentajes actuales de asignación sectorial"
     )
     risk_score: int = Field(
-        description="Risk score from 1 (conservative) to 10 (aggressive)", ge=1, le=10
+        description="Puntaje de riesgo de 1 (conservador) a 10 (agresivo)", ge=1, le=10
     )
     recommendations: List[str] = Field(
-        description="List of actionable recommendations for the portfolio"
+        description="Lista de recomendaciones accionables para el portafolio"
     )
 
 
 class RebalanceRecommendation(BaseModel):
-    """Schema for rebalancing recommendations - LLM structured output"""
+    """Esquema para recomendaciones de rebalanceo - salida estructurada LLM"""
 
     current_allocation: Dict[str, float] = Field(
-        description="Current allocation by instrument symbol"
+        description="Asignación actual por símbolo del instrumento"
     )
     target_allocation: Dict[str, float] = Field(
-        description="Recommended target allocation by symbol"
+        description="Asignación objetivo recomendada por símbolo"
     )
     trades: List[Dict] = Field(
-        description="List of trades needed to rebalance",
+        description="Lista de operaciones necesarias para el rebalanceo",
         example=[
             {"symbol": "SPY", "action": "sell", "quantity": 10},
             {"symbol": "BND", "action": "buy", "quantity": 50},
         ],
     )
-    rationale: str = Field(description="Explanation of why these changes are recommended")
+    rationale: str = Field(description="Explicación de por qué se recomiendan estos cambios")

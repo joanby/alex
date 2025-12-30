@@ -1,6 +1,6 @@
 """
-FastAPI backend for Alex Financial Advisor
-Handles all API routes with Clerk JWT authentication
+Backend FastAPI para Alex Financial Advisor
+Gestiona todas las rutas de API con autenticación Clerk JWT
 """
 
 import os
@@ -29,22 +29,22 @@ from src.schemas import (
     JobType, JobStatus
 )
 
-# Load environment variables
+# Cargar variables de entorno
 load_dotenv(override=True)
 
-# Configure logging
+# Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+# Inicializar aplicación FastAPI
 app = FastAPI(
     title="Alex Financial Advisor API",
-    description="Backend API for AI-powered financial planning",
+    description="API backend para planificación financiera potenciada por IA",
     version="1.0.0"
 )
 
-# CORS configuration
-# Get origins from CORS_ORIGINS env var (comma-separated) or fall back to localhost
+# Configuración CORS
+# Obtener orígenes de la variable de entorno CORS_ORIGINS (separados por coma) o usar localhost por defecto
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -54,26 +54,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Custom exception handlers for better error messages
+# Controladores de excepción personalizados para mejores mensajes de error
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
-    """Handle Pydantic validation errors with user-friendly messages"""
+    """Gestiona errores de validación de Pydantic con mensajes amigables"""
     return JSONResponse(
         status_code=422,
-        content={"detail": "Invalid input data. Please check your request and try again."}
+        content={"detail": "Datos de entrada no válidos. Por favor revisa tu solicitud e inténtalo de nuevo."}
     )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions with improved messages"""
-    # Map technical errors to user-friendly messages
+    """Gestiona excepciones HTTP con mensajes mejorados"""
+    # Mapea errores técnicos a mensajes amigables
     user_friendly_messages = {
-        401: "Your session has expired. Please sign in again.",
-        403: "You don't have permission to access this resource.",
-        404: "The requested resource was not found.",
-        429: "Too many requests. Please slow down and try again later.",
-        500: "An internal error occurred. Please try again later.",
-        503: "The service is temporarily unavailable. Please try again later."
+        401: "Tu sesión ha expirado. Por favor inicia sesión de nuevo.",
+        403: "No tienes permiso para acceder a este recurso.",
+        404: "El recurso solicitado no ha sido encontrado.",
+        429: "Demasiadas solicitudes. Por favor espera e inténtalo más tarde.",
+        500: "Ha ocurrido un error interno. Inténtalo de nuevo más tarde.",
+        503: "El servicio está temporalmente no disponible. Inténtalo de nuevo más tarde."
     }
 
     message = user_friendly_messages.get(exc.status_code, exc.detail)
@@ -84,39 +84,39 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle unexpected errors gracefully"""
+    """Gestiona errores inesperados de manera amable"""
     logger.error(f"Unexpected error: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "An unexpected error occurred. Our team has been notified."}
+        content={"detail": "Ha ocurrido un error inesperado. Nuestro equipo ha sido notificado."}
     )
 
-# Initialize services
+# Inicializar servicios
 db = Database()
 
-# SQS client for job queueing
+# Cliente SQS para la cola de trabajos
 sqs_client = boto3.client('sqs', region_name=os.getenv('DEFAULT_AWS_REGION', 'us-east-1'))
 SQS_QUEUE_URL = os.getenv('SQS_QUEUE_URL', '')
 
-# Clerk authentication setup (exactly like saas reference)
+# Configuración de autenticación de Clerk (igual que referencia saas)
 clerk_config = ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))
 clerk_guard = ClerkHTTPBearer(clerk_config)
 
 async def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(clerk_guard)) -> str:
-    """Extract user ID from validated Clerk token"""
-    # The clerk_guard dependency already validated the token
-    # creds.decoded contains the JWT payload
+    """Extraer el ID de usuario desde el token Clerk validado"""
+    # La dependencia clerk_guard ya validó el token
+    # creds.decoded contiene el payload JWT
     user_id = creds.decoded["sub"]
-    logger.info(f"Authenticated user: {user_id}")
+    logger.info(f"Usuario autenticado: {user_id}")
     return user_id
 
-# Request/Response models
+# Modelos de solicitud/respuesta
 class UserResponse(BaseModel):
     user: Dict[str, Any]
     created: bool
 
 class UserUpdate(BaseModel):
-    """Update user settings"""
+    """Actualizar configuración del usuario"""
     display_name: Optional[str] = None
     years_until_retirement: Optional[int] = None
     target_retirement_income: Optional[float] = None
@@ -124,28 +124,28 @@ class UserUpdate(BaseModel):
     region_targets: Optional[Dict[str, float]] = None
 
 class AccountUpdate(BaseModel):
-    """Update account"""
+    """Actualizar cuenta"""
     account_name: Optional[str] = None
     account_purpose: Optional[str] = None
     cash_balance: Optional[float] = None
 
 class PositionUpdate(BaseModel):
-    """Update position"""
+    """Actualizar posición"""
     quantity: Optional[float] = None
 
 class AnalyzeRequest(BaseModel):
-    analysis_type: str = Field(default="portfolio", description="Type of analysis to perform")
-    options: Dict[str, Any] = Field(default_factory=dict, description="Analysis options")
+    analysis_type: str = Field(default="portfolio", description="Tipo de análisis a realizar")
+    options: Dict[str, Any] = Field(default_factory=dict, description="Opciones del análisis")
 
 class AnalyzeResponse(BaseModel):
     job_id: str
     message: str
 
-# API Routes
+# Rutas de la API
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Endpoint de prueba de salud"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.get("/api/user", response_model=UserResponse)
@@ -153,20 +153,20 @@ async def get_or_create_user(
     clerk_user_id: str = Depends(get_current_user_id),
     creds: HTTPAuthorizationCredentials = Depends(clerk_guard)
 ):
-    """Get user or create if first time"""
+    """Obtiene el usuario o lo crea si es la primera vez"""
 
     try:
-        # Check if user exists
+        # Verifica si el usuario existe
         user = db.users.find_by_clerk_id(clerk_user_id)
 
         if user:
             return UserResponse(user=user, created=False)
 
-        # Create new user with defaults from JWT token
+        # Crear nuevo usuario con valores por defecto tomados del token JWT
         token_data = creds.decoded
-        display_name = token_data.get('name') or token_data.get('email', '').split('@')[0] or "New User"
+        display_name = token_data.get('name') or token_data.get('email', '').split('@')[0] or "Nuevo Usuario"
 
-        # Create user with ALL defaults in one operation
+        # Crear usuario con TODOS los valores por defecto en una sola operación
         user_data = {
             'clerk_user_id': clerk_user_id,
             'display_name': display_name,
@@ -176,34 +176,34 @@ async def get_or_create_user(
             'region_targets': {"north_america": 50, "international": 50}
         }
 
-        # Insert directly with all data
+        # Insertar directamente con todos los datos
         created_clerk_id = db.users.db.insert('users', user_data, returning='clerk_user_id')
 
-        # Fetch the created user
+        # Obtener el usuario creado
         created_user = db.users.find_by_clerk_id(clerk_user_id)
-        logger.info(f"Created new user: {clerk_user_id}")
+        logger.info(f"Nuevo usuario creado: {clerk_user_id}")
 
         return UserResponse(user=created_user, created=True)
 
     except Exception as e:
-        logger.error(f"Error in get_or_create_user: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load user profile")
+        logger.error(f"Error en get_or_create_user: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo cargar el perfil de usuario")
 
 @app.put("/api/user")
 async def update_user(user_update: UserUpdate, clerk_user_id: str = Depends(get_current_user_id)):
-    """Update user settings"""
+    """Actualizar configuración del usuario"""
 
     try:
-        # Get user
+        # Obtener usuario
         user = db.users.find_by_clerk_id(clerk_user_id)
 
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Update user - users table uses clerk_user_id as primary key
+        # Actualizar usuario - la tabla users usa clerk_user_id como clave primaria
         update_data = user_update.model_dump(exclude_unset=True)
 
-        # Use the database client directly since users table has clerk_user_id as PK
+        # Usa el cliente de base de datos directamente ya que users usa clerk_user_id como PK
         db.users.db.update(
             'users',
             update_data,
@@ -211,38 +211,38 @@ async def update_user(user_update: UserUpdate, clerk_user_id: str = Depends(get_
             {'clerk_user_id': clerk_user_id}
         )
 
-        # Return updated user
+        # Retornar usuario actualizado
         updated_user = db.users.find_by_clerk_id(clerk_user_id)
         return updated_user
 
     except Exception as e:
-        logger.error(f"Error updating user: {e}")
+        logger.error(f"Error actualizando usuario: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/accounts")
 async def list_accounts(clerk_user_id: str = Depends(get_current_user_id)):
-    """List user's accounts"""
+    """Listar cuentas del usuario"""
 
     try:
-        # Get accounts for user
+        # Obtener cuentas para el usuario
         accounts = db.accounts.find_by_user(clerk_user_id)
         return accounts
 
     except Exception as e:
-        logger.error(f"Error listing accounts: {e}")
+        logger.error(f"Error listando cuentas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/accounts")
 async def create_account(account: AccountCreate, clerk_user_id: str = Depends(get_current_user_id)):
-    """Create new account"""
+    """Crear nueva cuenta"""
 
     try:
-        # Verify user exists
+        # Verifica que el usuario exista
         user = db.users.find_by_clerk_id(clerk_user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Create account
+        # Crear cuenta
         account_id = db.accounts.create_account(
             clerk_user_id=clerk_user_id,
             account_name=account.account_name,
@@ -250,92 +250,92 @@ async def create_account(account: AccountCreate, clerk_user_id: str = Depends(ge
             cash_balance=getattr(account, 'cash_balance', Decimal('0'))
         )
 
-        # Return created account
+        # Retornar cuenta creada
         created_account = db.accounts.find_by_id(account_id)
         return created_account
 
     except Exception as e:
-        logger.error(f"Error creating account: {e}")
+        logger.error(f"Error creando cuenta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/accounts/{account_id}")
 async def update_account(account_id: str, account_update: AccountUpdate, clerk_user_id: str = Depends(get_current_user_id)):
-    """Update account"""
+    """Actualizar cuenta"""
 
     try:
-        # Verify account belongs to user
+        # Verificar que la cuenta pertenezca al usuario
         account = db.accounts.find_by_id(account_id)
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
-        # Update account
+        # Actualizar cuenta
         update_data = account_update.model_dump(exclude_unset=True)
         db.accounts.update(account_id, update_data)
 
-        # Return updated account
+        # Retornar cuenta actualizada
         updated_account = db.accounts.find_by_id(account_id)
         return updated_account
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating account: {e}")
+        logger.error(f"Error actualizando cuenta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/accounts/{account_id}")
 async def delete_account(account_id: str, clerk_user_id: str = Depends(get_current_user_id)):
-    """Delete an account and all its positions"""
+    """Eliminar una cuenta y todas sus posiciones"""
 
     try:
-        # Verify account belongs to user
+        # Verificar que la cuenta pertenezca al usuario
         account = db.accounts.find_by_id(account_id)
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
-        # Delete all positions first (due to foreign key constraint)
+        # Eliminar todas las posiciones primero (por restricción de clave foránea)
         positions = db.positions.find_by_account(account_id)
         for position in positions:
             db.positions.delete(position['id'])
 
-        # Delete the account
+        # Eliminar la cuenta
         db.accounts.delete(account_id)
 
-        return {"message": "Account deleted successfully"}
+        return {"message": "Cuenta eliminada exitosamente"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting account: {e}")
+        logger.error(f"Error eliminando cuenta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/accounts/{account_id}/positions")
 async def list_positions(account_id: str, clerk_user_id: str = Depends(get_current_user_id)):
-    """Get positions for account"""
+    """Obtener posiciones de una cuenta"""
 
     try:
-        # Verify account belongs to user
+        # Verificar que la cuenta pertenezca al usuario
         account = db.accounts.find_by_id(account_id)
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
         positions = db.positions.find_by_account(account_id)
 
-        # Format positions with instrument data for frontend
+        # Formatear posiciones con datos de instrumentos para el frontend
         formatted_positions = []
         for pos in positions:
-            # Get full instrument data
+            # Obtener datos completos del instrumento
             instrument = db.instruments.find_by_symbol(pos['symbol'])
             formatted_positions.append({
                 **pos,
@@ -347,135 +347,135 @@ async def list_positions(account_id: str, clerk_user_id: str = Depends(get_curre
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error listing positions: {e}")
+        logger.error(f"Error listando posiciones: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/positions")
 async def create_position(position: PositionCreate, clerk_user_id: str = Depends(get_current_user_id)):
-    """Create position"""
+    """Crear posición"""
 
     try:
-        # Verify account belongs to user
+        # Verificar que la cuenta pertenezca al usuario
         account = db.accounts.find_by_id(position.account_id)
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
-        # Check if instrument exists, if not create it
+        # Verifica si el instrumento existe, si no lo crea
         instrument = db.instruments.find_by_symbol(position.symbol.upper())
         if not instrument:
-            logger.info(f"Creating new instrument: {position.symbol.upper()}")
-            # Create a basic instrument entry with default allocations
-            # Import the schema from database
+            logger.info(f"Creando nuevo instrumento: {position.symbol.upper()}")
+            # Crear entrada básica de instrumento con asignaciones por defecto
+            # Importar el esquema desde la base de datos
             from src.schemas import InstrumentCreate
 
-            # Determine type based on common patterns
+            # Determinar tipo basándose en patrones comunes
             symbol_upper = position.symbol.upper()
             if len(symbol_upper) <= 5 and symbol_upper.isalpha():
                 instrument_type = "stock"
             else:
                 instrument_type = "etf"
 
-            # Create instrument with basic default allocations
-            # These can be updated later by the tagger agent
+            # Crear instrumento con asignaciones básicas por defecto
+            # Estas pueden actualizarse luego por el agente tagger
             new_instrument = InstrumentCreate(
                 symbol=symbol_upper,
-                name=f"{symbol_upper} - User Added",  # Basic name, can be updated later
+                name=f"{symbol_upper} - Agregado por el Usuario",  # Nombre básico, actualizable después
                 instrument_type=instrument_type,
-                current_price=Decimal("0.00"),  # Price will be updated by background processes
-                allocation_regions={"north_america": 100.0},  # Default to 100% NA
-                allocation_sectors={"other": 100.0},  # Default to 100% other
+                current_price=Decimal("0.00"),  # El precio se actualizará por procesos background
+                allocation_regions={"north_america": 100.0},  # Por defecto 100% NA
+                allocation_sectors={"other": 100.0},  # Por defecto 100% otro
                 allocation_asset_class={"equity": 100.0} if instrument_type == "stock" else {"fixed_income": 100.0}
             )
 
             db.instruments.create_instrument(new_instrument)
 
-        # Add position
+        # Agregar posición
         position_id = db.positions.add_position(
             account_id=position.account_id,
             symbol=position.symbol.upper(),
             quantity=position.quantity
         )
 
-        # Return created position
+        # Retornar posición creada
         created_position = db.positions.find_by_id(position_id)
         return created_position
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating position: {e}")
+        logger.error(f"Error creando posición: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/positions/{position_id}")
 async def update_position(position_id: str, position_update: PositionUpdate, clerk_user_id: str = Depends(get_current_user_id)):
-    """Update position"""
+    """Actualizar posición"""
 
     try:
-        # Get position and verify ownership
+        # Obtener posición y verificar propiedad
         position = db.positions.find_by_id(position_id)
         if not position:
-            raise HTTPException(status_code=404, detail="Position not found")
+            raise HTTPException(status_code=404, detail="Posición no encontrada")
 
         account = db.accounts.find_by_id(position['account_id'])
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
-        # Update position
+        # Actualizar posición
         update_data = position_update.model_dump(exclude_unset=True)
         db.positions.update(position_id, update_data)
 
-        # Return updated position
+        # Retornar posición actualizada
         updated_position = db.positions.find_by_id(position_id)
         return updated_position
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating position: {e}")
+        logger.error(f"Error actualizando posición: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/positions/{position_id}")
 async def delete_position(position_id: str, clerk_user_id: str = Depends(get_current_user_id)):
-    """Delete position"""
+    """Eliminar posición"""
 
     try:
-        # Get position and verify ownership
+        # Obtener posición y verificar propiedad
         position = db.positions.find_by_id(position_id)
         if not position:
-            raise HTTPException(status_code=404, detail="Position not found")
+            raise HTTPException(status_code=404, detail="Posición no encontrada")
 
         account = db.accounts.find_by_id(position['account_id'])
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-        # Verify ownership - accounts table stores clerk_user_id directly
+        # Verificar propiedad - la tabla accounts almacena clerk_user_id directamente
         if account.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
         db.positions.delete(position_id)
-        return {"message": "Position deleted"}
+        return {"message": "Posición eliminada"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting position: {e}")
+        logger.error(f"Error eliminando posición: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/instruments")
 async def list_instruments(clerk_user_id: str = Depends(get_current_user_id)):
-    """Get all available instruments for autocomplete"""
+    """Obtener todos los instrumentos disponibles para autocompletar"""
 
     try:
         instruments = db.instruments.find_all()
-        # Return simplified list for autocomplete
+        # Retornar lista simplificada para autocompletar
         return [
             {
                 "symbol": inst["symbol"],
@@ -486,31 +486,31 @@ async def list_instruments(clerk_user_id: str = Depends(get_current_user_id)):
             for inst in instruments
         ]
     except Exception as e:
-        logger.error(f"Error fetching instruments: {e}")
+        logger.error(f"Error obteniendo instrumentos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def trigger_analysis(request: AnalyzeRequest, clerk_user_id: str = Depends(get_current_user_id)):
-    """Trigger portfolio analysis"""
+    """Lanzar análisis de portafolio"""
 
     try:
-        # Get user
+        # Obtener usuario
         user = db.users.find_by_clerk_id(clerk_user_id)
 
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Create job
+        # Crear trabajo
         job_id = db.jobs.create_job(
             clerk_user_id=clerk_user_id,
             job_type="portfolio_analysis",
             request_payload=request.model_dump()
         )
 
-        # Get the created job
+        # Obtener trabajo creado
         job = db.jobs.find_by_id(job_id)
 
-        # Send to SQS
+        # Enviar a SQS
         if SQS_QUEUE_URL:
             message = {
                 'job_id': str(job_id),
@@ -523,99 +523,99 @@ async def trigger_analysis(request: AnalyzeRequest, clerk_user_id: str = Depends
                 QueueUrl=SQS_QUEUE_URL,
                 MessageBody=json.dumps(message)
             )
-            logger.info(f"Sent analysis job to SQS: {job_id}")
+            logger.info(f"Enviado trabajo de análisis a SQS: {job_id}")
         else:
-            logger.warning("SQS_QUEUE_URL not configured, job created but not queued")
+            logger.warning("SQS_QUEUE_URL no está configurada, el trabajo se ha creado pero no ha sido encolado")
 
         return AnalyzeResponse(
             job_id=str(job_id),
-            message="Analysis started. Check job status for results."
+            message="Análisis iniciado. Consulta el estado del trabajo para ver los resultados."
         )
 
     except Exception as e:
-        logger.error(f"Error triggering analysis: {e}")
+        logger.error(f"Error lanzando análisis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/jobs/{job_id}")
 async def get_job_status(job_id: str, clerk_user_id: str = Depends(get_current_user_id)):
-    """Get job status and results"""
+    """Obtener estado y resultados del trabajo"""
 
     try:
-        # Get job
+        # Obtener trabajo
         job = db.jobs.find_by_id(job_id)
         if not job:
-            raise HTTPException(status_code=404, detail="Job not found")
+            raise HTTPException(status_code=404, detail="Trabajo no encontrado")
 
-        # Verify job belongs to user - jobs table stores clerk_user_id directly
+        # Verificar que el trabajo pertenezca al usuario - jobs almacena clerk_user_id directamente
         if job.get('clerk_user_id') != clerk_user_id:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="No autorizado")
 
         return job
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting job status: {e}")
+        logger.error(f"Error obteniendo estado del trabajo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/jobs")
 async def list_jobs(clerk_user_id: str = Depends(get_current_user_id)):
-    """List user's analysis jobs"""
+    """Listar trabajos de análisis del usuario"""
 
     try:
-        # Get jobs for this user (with higher limit to avoid missing recent jobs)
+        # Obtener trabajos para este usuario (con límite mayor para no perder recientes)
         user_jobs = db.jobs.find_by_user(clerk_user_id, limit=100)
-        # Sort by created_at descending (most recent first)
+        # Ordenar por created_at descendente (más reciente primero)
         user_jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return {"jobs": user_jobs}
 
     except Exception as e:
-        logger.error(f"Error listing jobs: {e}")
+        logger.error(f"Error listando trabajos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/reset-accounts")
 async def reset_accounts(clerk_user_id: str = Depends(get_current_user_id)):
-    """Delete all accounts for the current user"""
+    """Eliminar todas las cuentas del usuario actual"""
 
     try:
-        # Get user
+        # Obtener usuario
         user = db.users.find_by_clerk_id(clerk_user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Get all accounts for user
+        # Obtener todas las cuentas del usuario
         accounts = db.accounts.find_by_user(clerk_user_id)
 
-        # Delete each account (positions will cascade delete)
+        # Eliminar cada cuenta (las posiciones se eliminan en cascada)
         deleted_count = 0
         for account in accounts:
             try:
-                # Positions are deleted automatically via CASCADE
+                # Las posiciones se eliminan automáticamente por CASCADE
                 db.accounts.delete(account['id'])
                 deleted_count += 1
             except Exception as e:
-                logger.warning(f"Could not delete account {account['id']}: {e}")
+                logger.warning(f"No se pudo eliminar la cuenta {account['id']}: {e}")
 
         return {
-            "message": f"Deleted {deleted_count} account(s)",
+            "message": f"Eliminadas {deleted_count} cuenta(s)",
             "accounts_deleted": deleted_count
         }
 
     except Exception as e:
-        logger.error(f"Error resetting accounts: {e}")
+        logger.error(f"Error reseteando cuentas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/populate-test-data")
 async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
-    """Populate test data for the current user"""
+    """Poblar datos de prueba para el usuario actual"""
 
     try:
-        # Get user
+        # Obtener usuario
         user = db.users.find_by_clerk_id(clerk_user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Define missing instruments that might not be in the database
+        # Definir instrumentos faltantes que puede que no estén en la base de datos
         missing_instruments = {
             "AAPL": {
                 "name": "Apple Inc.",
@@ -659,7 +659,7 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
             },
         }
 
-        # Check and add missing instruments
+        # Verificar y agregar instrumentos faltantes
         for symbol, info in missing_instruments.items():
             existing = db.instruments.find_by_symbol(symbol)
             if not existing:
@@ -676,40 +676,40 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
                         allocation_asset_class=info["allocation_asset_class"]
                     )
                     db.instruments.create_instrument(instrument_data)
-                    logger.info(f"Added missing instrument: {symbol}")
+                    logger.info(f"Instrumento faltante añadido: {symbol}")
                 except Exception as e:
-                    logger.warning(f"Could not add instrument {symbol}: {e}")
+                    logger.warning(f"No se pudo agregar instrumento {symbol}: {e}")
 
-        # Create accounts with test data
+        # Crear cuentas con datos de prueba
         accounts_data = [
             {
                 "name": "401k Long-term",
-                "purpose": "Primary retirement savings account with employer match",
+                "purpose": "Cuenta primaria de ahorro para retiro con aportes del empleador",
                 "cash": 5000.00,
                 "positions": [
-                    ("SPY", 150),   # S&P 500 ETF
-                    ("VTI", 100),   # Total Stock Market ETF
-                    ("BND", 200),   # Bond ETF
-                    ("QQQ", 75),    # Nasdaq ETF
-                    ("IWM", 50),    # Small Cap ETF
+                    ("SPY", 150),   # ETF S&P 500
+                    ("VTI", 100),   # ETF Total Stock Market
+                    ("BND", 200),   # ETF Bonos
+                    ("QQQ", 75),    # ETF Nasdaq
+                    ("IWM", 50),    # ETF Small Cap
                 ]
             },
             {
                 "name": "Roth IRA",
-                "purpose": "Tax-free retirement growth account",
+                "purpose": "Cuenta de crecimiento para retiro libre de impuestos",
                 "cash": 2500.00,
                 "positions": [
-                    ("VTI", 80),    # Total Stock Market ETF
-                    ("VXUS", 60),   # International Stock ETF
-                    ("VNQ", 40),    # Real Estate ETF
-                    ("GLD", 25),    # Gold ETF
-                    ("TLT", 30),    # Long-term Treasury ETF
-                    ("VIG", 45),    # Dividend Growth ETF
+                    ("VTI", 80),    # ETF Total Stock Market
+                    ("VXUS", 60),   # ETF Internacional
+                    ("VNQ", 40),    # ETF Real Estate
+                    ("GLD", 25),    # ETF Oro
+                    ("TLT", 30),    # ETF Bonos Tesoro Largo Plazo
+                    ("VIG", 45),    # ETF Dividendos Crecientes
                 ]
             },
             {
                 "name": "Brokerage Account",
-                "purpose": "Taxable investment account for individual stocks",
+                "purpose": "Cuenta de inversión gravable para acciones individuales",
                 "cash": 10000.00,
                 "positions": [
                     ("TSLA", 15),   # Tesla
@@ -724,7 +724,7 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
 
         created_accounts = []
         for account_data in accounts_data:
-            # Create account
+            # Crear cuenta
             account_id = db.accounts.create_account(
                 clerk_user_id=clerk_user_id,
                 account_name=account_data["name"],
@@ -732,7 +732,7 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
                 cash_balance=Decimal(str(account_data["cash"]))
             )
 
-            # Add positions
+            # Agregar posiciones
             for symbol, quantity in account_data["positions"]:
                 try:
                     db.positions.add_position(
@@ -741,11 +741,11 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
                         quantity=Decimal(str(quantity))
                     )
                 except Exception as e:
-                    logger.warning(f"Could not add position {symbol}: {e}")
+                    logger.warning(f"No se pudo agregar posición {symbol}: {e}")
 
             created_accounts.append(account_id)
 
-        # Get all accounts with their positions for summary
+        # Obtener todas las cuentas con sus posiciones para resumen
         all_accounts = []
         for account_id in created_accounts:
             account = db.accounts.find_by_id(account_id)
@@ -754,16 +754,16 @@ async def populate_test_data(clerk_user_id: str = Depends(get_current_user_id)):
             all_accounts.append(account)
 
         return {
-            "message": "Test data populated successfully",
+            "message": "Datos de prueba poblados correctamente",
             "accounts_created": len(created_accounts),
             "accounts": all_accounts
         }
 
     except Exception as e:
-        logger.error(f"Error populating test data: {e}")
+        logger.error(f"Error poblando datos de prueba: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Lambda handler
+# Handler para Lambda
 handler = Mangum(app)
 
 if __name__ == "__main__":

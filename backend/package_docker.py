@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Package all Lambda functions using Docker for AWS compatibility.
-Runs each agent's package_docker.py script.
+Empaqueta todas las funciones Lambda usando Docker para compatibilidad con AWS.
+Ejecuta el script package_docker.py de cada agente.
 """
 
 import os
@@ -11,16 +11,16 @@ from pathlib import Path
 
 
 def run_packaging(agent_name):
-    """Run packaging for a specific agent."""
+    """Empaqueta un agente específico."""
     agent_dir = Path(__file__).parent / agent_name
     package_script = agent_dir / "package_docker.py"
 
     if not package_script.exists():
-        print(f"  ❌ {agent_name}: Missing package_docker.py")
+        print(f"  ❌ {agent_name}: Falta package_docker.py")
         return False
 
-    print(f"\n📦 Packaging {agent_name.upper()} agent...")
-    print(f"  Running: cd {agent_dir} && uv run package_docker.py")
+    print(f"\n📦 Empaquetando agente {agent_name.upper()}...")
+    print(f"  Ejecutando: cd {agent_dir} && uv run package_docker.py")
 
     try:
         result = subprocess.run(
@@ -28,19 +28,19 @@ def run_packaging(agent_name):
         )
 
         if result.returncode == 0:
-            # Look for the created zip file
+            # Busca el archivo zip creado
             zip_files = list(agent_dir.glob("*.zip"))
             if zip_files:
                 zip_file = zip_files[0]
                 size_mb = zip_file.stat().st_size / (1024 * 1024)
-                print(f"  ✅ Created: {zip_file.name} ({size_mb:.1f} MB)")
+                print(f"  ✅ Creado: {zip_file.name} ({size_mb:.1f} MB)")
                 return True
             else:
-                print(f"  ⚠️  Warning: No zip file found after packaging")
+                print(f"  ⚠️  Advertencia: No se encontró archivo zip tras empaquetar")
                 return True
         else:
             print(
-                f"  ❌ Error with {agent_name.upper()}:\nPlease note that warnings about uv environment can be ignored:\n{result.stderr}\nOutput from script is:\n{result.stdout}"
+                f"  ❌ Error con {agent_name.upper()}:\nPuedes ignorar advertencias sobre el entorno uv:\n{result.stderr}\nSalida del script:\n{result.stdout}"
             )
             return False
 
@@ -50,9 +50,9 @@ def run_packaging(agent_name):
 
 
 def main():
-    """Package all Lambda functions."""
+    """Empaqueta todas las funciones Lambda."""
     print("=" * 60)
-    print("PACKAGING ALL LAMBDA FUNCTIONS")
+    print("EMPAQUETANDO TODAS LAS FUNCIONES LAMBDA")
     print("=" * 60)
 
     agents = ["tagger", "reporter", "charter", "retirement", "planner"]
@@ -63,27 +63,27 @@ def main():
         results[agent] = success
 
     print("\n" + "=" * 60)
-    print("PACKAGING SUMMARY")
+    print("RESUMEN DE EMPAQUETADO")
     print("=" * 60)
 
     success_count = sum(1 for s in results.values() if s)
     total_count = len(results)
 
     for agent, success in results.items():
-        status = "✅ Success" if success else "❌ Failed"
+        status = "✅ Éxito" if success else "❌ Fallo"
         print(f"{agent.ljust(12)}: {status}")
 
     print("\n" + "=" * 60)
-    print(f"Packaged: {success_count}/{total_count}")
+    print(f"Empaquetado: {success_count}/{total_count}")
 
     if success_count == total_count:
-        print("\n✅ ALL LAMBDA FUNCTIONS PACKAGED SUCCESSFULLY!")
-        print("\nNext steps:")
-        print("1. Deploy infrastructure: cd terraform/6_agents && terraform apply")
-        print("2. Deploy Lambda functions: cd backend && uv run deploy_all_lambdas.py")
+        print("\n✅ ¡TODAS LAS FUNCIONES LAMBDA SE HAN EMPAQUETADO CORRECTAMENTE!")
+        print("\nSiguientes pasos:")
+        print("1. Despliega infraestructura: cd terraform/6_agents && terraform apply")
+        print("2. Despliega las funciones Lambda: cd backend && uv run deploy_all_lambdas.py")
         return 0
     else:
-        print(f"\n⚠️  {total_count - success_count} agents failed to package")
+        print(f"\n⚠️  {total_count - success_count} agentes fallaron en el empaquetado")
         return 1
 
 

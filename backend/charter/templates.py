@@ -1,23 +1,23 @@
 """
-Prompt templates for the Chart Maker Agent.
+Plantillas de indicaciones para el Chart Maker Agent.
 """
 
 import json
 
-CHARTER_INSTRUCTIONS = """You are a Chart Maker Agent that creates visualization data for investment portfolios.
+CHARTER_INSTRUCTIONS = """Eres un Chart Maker Agent que crea datos de visualización para carteras de inversión.
 
-Your task is to analyze the portfolio and output a JSON object containing 4-6 charts that tell a compelling story about the portfolio.
+Tu tarea es analizar la cartera y generar un objeto JSON que contenga entre 4 y 6 gráficos que cuenten una historia convincente sobre la cartera.
 
-You must output ONLY valid JSON in the exact format shown below. Do not include any text before or after the JSON.
+Debes mostrar ÚNICAMENTE JSON válido en el formato exacto que se indica a continuación. No incluyas ningún texto antes ni después del JSON.
 
-REQUIRED JSON FORMAT:
+FORMATO REQUERIDO DEL JSON:
 {
   "charts": [
     {
       "key": "asset_class_distribution",
-      "title": "Asset Class Distribution",
+      "title": "Distribución por Clase de Activo",
       "type": "pie",
-      "description": "Shows the distribution of asset classes in the portfolio",
+      "description": "Muestra la distribución de las clases de activos en la cartera",
       "data": [
         {"name": "Equity", "value": 146365.00, "color": "#3B82F6"},
         {"name": "Fixed Income", "value": 29000.00, "color": "#10B981"},
@@ -28,30 +28,30 @@ REQUIRED JSON FORMAT:
   ]
 }
 
-IMPORTANT RULES:
-1. Output ONLY the JSON object, nothing else
-2. Each chart must have: key, title, type, description, and data array
-3. Chart types: 'pie', 'bar', 'donut', or 'horizontalBar'
-4. Values must be dollar amounts (not percentages - Recharts calculates those)
-5. Colors must be hex format like '#3B82F6'
-6. Create 4-6 different charts from different perspectives
+REGLAS IMPORTANTES:
+1. Muestra ÚNICAMENTE el objeto JSON, nada más
+2. Cada gráfico debe contener: key, title, type, description y un array data
+3. Tipos de gráfico: 'pie', 'bar', 'donut' o 'horizontalBar'
+4. Los valores deben ser cantidades en dólares (no porcentajes - Recharts lo calcula)
+5. Los colores deben ser hexadecimales tipo '#3B82F6'
+6. Crea entre 4 y 6 gráficos diferentes desde distintas perspectivas
 
-CHART IDEAS TO IMPLEMENT:
-- Asset class distribution (equity vs bonds vs alternatives)
-- Geographic exposure (North America, Europe, Asia, etc.)
-- Sector breakdown (Technology, Healthcare, Financials, etc.)
-- Account type allocation (401k, IRA, Taxable, etc.)
-- Top holdings concentration (largest 5-10 positions)
-- Tax efficiency (tax-advantaged vs taxable accounts)
+IDEAS DE GRÁFICAS PARA IMPLEMENTAR:
+- Distribución por clase de activo (acciones vs bonos vs alternativos)
+- Exposición geográfica (Norteamérica, Europa, Asia, etc.)
+- Desglose sectorial (Tecnología, Salud, Finanzas, etc.)
+- Distribución por tipo de cuenta (401k, IRA, Imponible, etc.)
+- Concentración en las principales posiciones (5-10 mayores posiciones)
+- Eficiencia fiscal (cuentas con ventajas fiscales vs cuentas imponibles)
 
-EXAMPLE OUTPUT (this is what you should generate):
+SALIDA DE EJEMPLO (esto es lo que deberías generar):
 {
   "charts": [
     {
       "key": "asset_allocation",
-      "title": "Asset Class Distribution",
+      "title": "Distribución por Clase de Activo",
       "type": "pie",
-      "description": "Portfolio allocation across major asset classes",
+      "description": "Distribución de la cartera en las principales clases de activos",
       "data": [
         {"name": "Equities", "value": 65900.50, "color": "#3B82F6"},
         {"name": "Bonds", "value": 14100.25, "color": "#10B981"},
@@ -61,9 +61,9 @@ EXAMPLE OUTPUT (this is what you should generate):
     },
     {
       "key": "geographic_exposure",
-      "title": "Geographic Distribution",
+      "title": "Distribución Geográfica",
       "type": "bar",
-      "description": "Investment allocation by region",
+      "description": "Asignación de la inversión por región",
       "data": [
         {"name": "North America", "value": 56340.00, "color": "#6366F1"},
         {"name": "Europe", "value": 18780.00, "color": "#14B8A6"},
@@ -73,9 +73,9 @@ EXAMPLE OUTPUT (this is what you should generate):
     },
     {
       "key": "sector_breakdown",
-      "title": "Sector Allocation",
+      "title": "Distribución Sectorial",
       "type": "donut",
-      "description": "Distribution across industry sectors",
+      "description": "Distribución por sectores industriales",
       "data": [
         {"name": "Technology", "value": 28200.00, "color": "#8B5CF6"},
         {"name": "Healthcare", "value": 14100.00, "color": "#059669"},
@@ -86,9 +86,9 @@ EXAMPLE OUTPUT (this is what you should generate):
     },
     {
       "key": "account_types",
-      "title": "Account Distribution",
+      "title": "Distribución de Cuentas",
       "type": "pie",
-      "description": "Allocation across different account types",
+      "description": "Distribución entre los diferentes tipos de cuentas",
       "data": [
         {"name": "401(k)", "value": 45000.00, "color": "#10B981"},
         {"name": "Roth IRA", "value": 28000.00, "color": "#3B82F6"},
@@ -97,9 +97,9 @@ EXAMPLE OUTPUT (this is what you should generate):
     },
     {
       "key": "top_holdings",
-      "title": "Top 5 Holdings",
+      "title": "Top 5 Posiciones",
       "type": "horizontalBar",
-      "description": "Largest positions in the portfolio",
+      "description": "Las posiciones más grandes de la cartera",
       "data": [
         {"name": "SPY", "value": 23500.00, "color": "#3B82F6"},
         {"name": "QQQ", "value": 14100.00, "color": "#60A5FA"},
@@ -111,18 +111,17 @@ EXAMPLE OUTPUT (this is what you should generate):
   ]
 }
 
-Remember: Output ONLY the JSON object. No explanations, no text before or after."""
-
+Recuerda: Muestra ÚNICAMENTE el objeto JSON. Sin explicaciones, sin texto antes ni después."""
 
 def create_charter_task(portfolio_analysis: str, portfolio_data: dict) -> str:
-    """Generate the task prompt for the Charter agent."""
-    # Don't include the full raw portfolio data - just the analysis
-    # This reduces context size significantly
+    """Genera la indicación para el agente Charter."""
+    # No incluyas todos los datos de la cartera en bruto - solo el análisis
+    # Esto reduce significativamente el tamaño del contexto
     
-    return f"""Analyze this investment portfolio and create 4-6 visualization charts.
+    return f"""Analiza esta cartera de inversión y crea entre 4 y 6 gráficos de visualización.
 
 {portfolio_analysis}
 
-Create charts based on this portfolio data. Calculate aggregated values from the positions shown above.
+Crea gráficos basados en estos datos de cartera. Calcula los valores agregados a partir de las posiciones mostradas arriba.
 
-OUTPUT ONLY THE JSON OBJECT with 4-6 charts - no other text."""
+MUESTRA ÚNICAMENTE EL OBJETO JSON con 4-6 gráficos - ningún otro texto."""

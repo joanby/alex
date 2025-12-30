@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test for Charter agent
+Prueba simple para el agente Charter
 """
 
 import asyncio
@@ -15,15 +15,15 @@ from lambda_handler import lambda_handler
 
 
 def test_charter():
-    """Test the charter agent with simple portfolio data"""
+    """Prueba el agente charter con datos de portafolio simples"""
 
-    # Create a real job in the database
+    # Crea un trabajo real en la base de datos
     db = Database()
     job_create = JobCreate(
         clerk_user_id="test_user_001", job_type="portfolio_analysis", request_payload={"test": True}
     )
     job_id = db.jobs.create(job_create.model_dump())
-    print(f"Created test job: {job_id}")
+    print(f"Trabajo de prueba creado: {job_id}")
 
     test_event = {
         "job_id": job_id,
@@ -55,36 +55,36 @@ def test_charter():
         },
     }
 
-    print("Testing Charter Agent...")
+    print("Probando el Agente Charter...")
     print("=" * 60)
 
     import sys
 
-    print("About to call lambda_handler...", flush=True)
+    print("A punto de llamar a lambda_handler...", flush=True)
     sys.stdout.flush()
     result = lambda_handler(test_event, None)
-    print("lambda_handler returned", flush=True)
+    print("lambda_handler ha regresado", flush=True)
 
-    print(f"Status Code: {result['statusCode']}")
+    print(f"Código de estado: {result['statusCode']}")
 
     if result["statusCode"] == 200:
         body = json.loads(result["body"])
-        print(f"Success: {body.get('success', False)}")
-        print(f"Message: {body.get('message', 'N/A')}")
+        print(f"Éxito: {body.get('success', False)}")
+        print(f"Mensaje: {body.get('message', 'N/A')}")
 
-        # Check what charts were created
+        # Comprueba qué gráficos fueron creados
         job = db.jobs.find_by_id(job_id)
         if job and job.get("charts_payload"):
-            print(f"\n📊 Charts Created ({len(job['charts_payload'])} total):")
+            print(f"\n📊 Gráficos Creados ({len(job['charts_payload'])} en total):")
             print("=" * 50)
             for chart_key, chart_data in job["charts_payload"].items():
-                print(f"\n🎯 Chart: {chart_key}")
-                print(f"   Title: {chart_data.get('title', 'N/A')}")
-                print(f"   Type: {chart_data.get('type', 'N/A')}")
-                print(f"   Description: {chart_data.get('description', 'N/A')}")
+                print(f"\n🎯 Gráfico: {chart_key}")
+                print(f"   Título: {chart_data.get('title', 'N/A')}")
+                print(f"   Tipo: {chart_data.get('type', 'N/A')}")
+                print(f"   Descripción: {chart_data.get('description', 'N/A')}")
 
                 data_points = chart_data.get("data", [])
-                print(f"   Data Points ({len(data_points)}):")
+                print(f"   Puntos de Datos ({len(data_points)}):")
                 for i, point in enumerate(data_points):
                     name = point.get("name", "N/A")
                     value = point.get("value", 0)
@@ -92,13 +92,13 @@ def test_charter():
                     print(f"     {i+1}. {name}: ${value:,.2f} {color}")
 
         else:
-            print("\n❌ No charts found in database")
+            print("\n❌ No se encontraron gráficos en la base de datos")
     else:
         print(f"Error: {result['body']}")
 
-    # Clean up - delete the test job
+    # Limpieza - elimina el trabajo de prueba
     db.jobs.delete(job_id)
-    print(f"Deleted test job: {job_id}")
+    print(f"Trabajo de prueba eliminado: {job_id}")
 
     print("=" * 60)
 

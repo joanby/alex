@@ -9,17 +9,17 @@ logger = logging.getLogger()
 
 class Evaluation(BaseModel):
     feedback: str = Field(
-        description="Your feedback on the financial report and rationale for your score"
+        description="Tu feedback sobre el informe financiero y la justificación de tu puntuación"
     )
     score: float = Field(
-        description="Score from 0 to 100 where 0 represents a terrible quality financial report and 100 represents an outstanding financial report"
+        description="Puntuación de 0 a 100 donde 0 representa un informe financiero de calidad terrible y 100 representa un informe financiero sobresaliente"
     )
 
 
 async def evaluate(original_instructions, original_task, original_output) -> Evaluation:
-    # Get model configuration
+    # Obtener configuración del modelo
     model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
+    # Establecer región para llamadas LiteLLM Bedrock
     bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
     logger.info(f"DEBUG: BEDROCK_REGION from env = {bedrock_region}")
     os.environ["AWS_REGION_NAME"] = bedrock_region
@@ -28,34 +28,34 @@ async def evaluate(original_instructions, original_task, original_output) -> Eva
     model = LitellmModel(model=f"bedrock/{model_id}")
 
     instructions = """
-You are an Evaluation Agent that evaluates the quality of a financial report from a financial planning agent.
-You will be provided with the instructions that were sent to the analyst, and its output, and you must evaluate the quality of the output.
+Eres un Agente de Evaluación que valora la calidad de un informe financiero generado por un agente de planificación financiera.
+Se te proporcionarán las instrucciones enviadas al analista y su resultado, y debes evaluar la calidad del resultado.
 """
 
-    # Create task
+    # Crear task
     task = f"""
-The financial planning agent was given the following instructions:
+Al agente de planificación financiera se le dieron las siguientes instrucciones:
 
 {original_instructions}
 
-And it was assigned this task:
+Y se le asignó esta tarea:
 
 {original_task}
 
-The financial planning agent's output was:
+La salida del agente de planificación financiera fue:
 
 {original_output}
 
-Evaluate this output and respond with your comments and score.
+Evalúa esta salida y responde con tus comentarios y puntuación.
 """
 
     try:
-        logger.info("Judging financial report")
+        logger.info("Evaluando informe financiero")
         agent = Agent(
             name="Judge Agent", instructions=instructions, model=model, output_type=Evaluation
         )
         result = await Runner.run(agent, input=task, max_turns=5)
         return result.final_output_as(Evaluation)
     except Exception as e:
-        logger.error(f"Error evaluating financial report: {e}")
-        return Evaluation(feedback=f"Error evaluating financial report: {e}", score=80)
+        logger.error(f"Error al evaluar el informe financiero: {e}")
+        return Evaluation(feedback=f"Error al evaluar el informe financiero: {e}", score=80)

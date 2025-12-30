@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Watch CloudWatch logs from all Alex agents in real-time.
-Polls all 5 agent log groups simultaneously and displays output with color coding.
+Ver el registro de CloudWatch de todos los agentes Alex en tiempo real.
+Consulta los registros de los 5 agentes simultáneamente y muestra la salida con codificación de color.
 """
 
 import boto3
@@ -12,20 +12,20 @@ from typing import Dict, List, Optional
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ANSI color codes for terminal output
+# Códigos de color ANSI para la salida por terminal
 COLORS = {
-    'PLANNER': '\033[94m',    # Blue
-    'TAGGER': '\033[93m',     # Yellow
-    'REPORTER': '\033[92m',   # Green
-    'CHARTER': '\033[96m',    # Cyan
+    'PLANNER': '\033[94m',    # Azul
+    'TAGGER': '\033[93m',     # Amarillo
+    'REPORTER': '\033[92m',   # Verde
+    'CHARTER': '\033[96m',    # Cian
     'RETIREMENT': '\033[95m', # Magenta
-    'ERROR': '\033[91m',      # Red
-    'LANGFUSE': '\033[35m',   # Purple (for LangFuse-related logs)
-    'RESET': '\033[0m',       # Reset to default
-    'BOLD': '\033[1m',        # Bold text
+    'ERROR': '\033[91m',      # Rojo
+    'LANGFUSE': '\033[35m',   # Púrpura (para los logs relacionados con LangFuse)
+    'RESET': '\033[0m',       # Restablecer a predeterminado
+    'BOLD': '\033[1m',        # Texto en negrita
 }
 
-# Agent log groups
+# Grupos de logs de los agentes
 LOG_GROUPS = {
     'PLANNER': '/aws/lambda/alex-planner',
     'TAGGER': '/aws/lambda/alex-tagger',
@@ -36,36 +36,36 @@ LOG_GROUPS = {
 
 
 class AgentLogWatcher:
-    """Watches CloudWatch logs for all agents."""
+    """Observa los logs de CloudWatch para todos los agentes."""
 
     def __init__(self, region: str = 'us-east-1', lookback_minutes: int = 5):
-        """Initialize the log watcher."""
+        """Inicializa el observador de logs."""
         self.logs_client = boto3.client('logs', region_name=region)
         self.lookback_minutes = lookback_minutes
         self.last_timestamps = {agent: 0 for agent in LOG_GROUPS}
 
     def get_log_events(self, agent: str, start_time: int) -> List[Dict]:
-        """Get log events for a specific agent."""
+        """Obtiene los eventos del log para un agente específico."""
         log_group = LOG_GROUPS[agent]
 
         try:
-            # Get all log streams in the log group
+            # Obtiene todos los flujos de logs en el grupo
             response = self.logs_client.describe_log_streams(
                 logGroupName=log_group,
                 orderBy='LastEventTime',
                 descending=True,
-                limit=5  # Get the 5 most recent streams
+                limit=5  # Obtiene los 5 flujos más recientes
             )
 
             if not response.get('logStreams'):
                 return []
 
-            # Collect events from all recent streams
+            # Recoge los eventos de todos los flujos recientes
             all_events = []
             for stream in response['logStreams']:
                 stream_name = stream['logStreamName']
 
-                # Get events from this stream
+                # Obtiene los eventos de este flujo
                 try:
                     events_response = self.logs_client.filter_log_events(
                         logGroupName=log_group,
@@ -78,35 +78,35 @@ class AgentLogWatcher:
                     all_events.extend(events)
 
                 except Exception as e:
-                    # Stream might have been deleted or have no events
+                    # Es posible que el flujo haya sido eliminado o no tenga eventos
                     continue
 
-            # Sort events by timestamp
+            # Ordena los eventos por timestamp
             all_events.sort(key=lambda x: x['timestamp'])
 
-            # Update last timestamp for this agent
+            # Actualiza el último timestamp para este agente
             if all_events:
                 self.last_timestamps[agent] = all_events[-1]['timestamp'] + 1
 
             return all_events
 
         except self.logs_client.exceptions.ResourceNotFoundException:
-            print(f"{COLORS['ERROR']}Log group {log_group} not found{COLORS['RESET']}")
+            print(f"{COLORS['ERROR']}Grupo de logs {log_group} no encontrado{COLORS['RESET']}")
             return []
         except Exception as e:
-            print(f"{COLORS['ERROR']}Error fetching logs for {agent}: {e}{COLORS['RESET']}")
+            print(f"{COLORS['ERROR']}Error al obtener los logs para {agent}: {e}{COLORS['RESET']}")
             return []
 
     def format_message(self, agent: str, event: Dict) -> str:
-        """Format a log message with color coding."""
+        """Formatea un mensaje de log con codificación de color."""
         timestamp = datetime.fromtimestamp(event['timestamp'] / 1000).strftime('%H:%M:%S.%f')[:-3]
         message = event['message'].rstrip()
 
-        # Color the agent name
+        # Colorea el nombre del agente
         agent_color = COLORS[agent]
         agent_label = f"{agent_color}[{agent:10}]{COLORS['RESET']}"
 
-        # Highlight specific message types
+        # Destaca tipos específicos de mensajes
         if 'ERROR' in message or 'Exception' in message:
             message_color = COLORS['ERROR']
         elif 'LangFuse' in message or 'Observability' in message:
@@ -120,7 +120,7 @@ class AgentLogWatcher:
         return f"{timestamp} {agent_label} {message}"
 
     def poll_agent(self, agent: str, start_time: int) -> List[str]:
-        """Poll a single agent for new log events."""
+        """Consulta un solo agente en busca de nuevos eventos de log."""
         events = self.get_log_events(agent, start_time)
         formatted_messages = []
 
@@ -130,44 +130,44 @@ class AgentLogWatcher:
         return formatted_messages
 
     def watch(self, poll_interval: int = 2):
-        """Watch all agent logs continuously."""
-        print(f"{COLORS['BOLD']}Watching CloudWatch logs for all Alex agents...{COLORS['RESET']}")
-        print(f"Looking back {self.lookback_minutes} minutes initially")
-        print(f"Polling every {poll_interval} seconds")
-        print(f"Press Ctrl+C to stop\n")
+        """Observa continuamente los logs de todos los agentes."""
+        print(f"{COLORS['BOLD']}Observando los logs de CloudWatch para todos los agentes Alex...{COLORS['RESET']}")
+        print(f"Mirando hacia atrás {self.lookback_minutes} minutos inicialmente")
+        print(f"Consultando cada {poll_interval} segundos")
+        print(f"Presiona Ctrl+C para detener\n")
 
-        # Initial start time (lookback period)
+        # Tiempo de inicio inicial (periodo de retroceso)
         initial_start = int((datetime.now() - timedelta(minutes=self.lookback_minutes)).timestamp() * 1000)
 
-        # Set initial timestamps
+        # Establece los timestamps iniciales
         for agent in LOG_GROUPS:
             self.last_timestamps[agent] = initial_start
 
         try:
             while True:
-                # Poll all agents in parallel
+                # Consulta todos los agentes en paralelo
                 with ThreadPoolExecutor(max_workers=5) as executor:
                     futures = {
                         executor.submit(self.poll_agent, agent, self.last_timestamps[agent]): agent
                         for agent in LOG_GROUPS
                     }
 
-                    # Collect and display results
+                    # Recoge y muestra los resultados
                     all_messages = []
                     for future in as_completed(futures):
                         messages = future.result()
                         all_messages.extend(messages)
 
-                    # Sort messages by timestamp and display
+                    # Ordena los mensajes por timestamp y los muestra
                     all_messages.sort()
                     for message in all_messages:
                         print(message)
 
-                # Wait before next poll
+                # Espera antes de la siguiente consulta
                 time.sleep(poll_interval)
 
         except KeyboardInterrupt:
-            print(f"\n{COLORS['BOLD']}Stopped watching logs{COLORS['RESET']}")
+            print(f"\n{COLORS['BOLD']}Observación de logs detenida{COLORS['RESET']}")
             sys.exit(0)
         except Exception as e:
             print(f"{COLORS['ERROR']}Error: {e}{COLORS['RESET']}")
@@ -175,24 +175,24 @@ class AgentLogWatcher:
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description='Watch CloudWatch logs from all Alex agents')
+    """Punto de entrada principal."""
+    parser = argparse.ArgumentParser(description='Ver los logs de CloudWatch de todos los agentes Alex')
     parser.add_argument(
         '--region',
         default='us-east-1',
-        help='AWS region (default: us-east-1)'
+        help='Región de AWS (por defecto: us-east-1)'
     )
     parser.add_argument(
         '--lookback',
         type=int,
         default=5,
-        help='Minutes to look back initially (default: 5)'
+        help='Minutos previos a consultar inicialmente (por defecto: 5)'
     )
     parser.add_argument(
         '--interval',
         type=int,
         default=2,
-        help='Polling interval in seconds (default: 2)'
+        help='Intervalo de consulta en segundos (por defecto: 2)'
     )
 
     args = parser.parse_args()

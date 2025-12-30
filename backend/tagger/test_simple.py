@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test for Tagger agent
+Test simple para el agente Tagger
 """
 
 import asyncio
@@ -12,7 +12,7 @@ load_dotenv(override=True)
 from lambda_handler import lambda_handler
 
 def test_tagger():
-    """Test the tagger agent with unknown instruments"""
+    """Prueba el agente tagger con instrumentos desconocidos"""
     
     test_event = {
         "instruments": [
@@ -20,17 +20,17 @@ def test_tagger():
         ]
     }
     
-    print("Testing Tagger Agent...")
+    print("Probando el agente Tagger...")
     print("=" * 60)
     
     result = lambda_handler(test_event, None)
     
-    print(f"Status Code: {result['statusCode']}")
+    print(f"Código de estado: {result['statusCode']}")
     
     if result['statusCode'] == 200:
         body = json.loads(result['body'])
-        print(f"Tagged: {body.get('tagged', 0)} instruments")
-        print(f"Updated: {body.get('updated', [])}")
+        print(f"Etiquetados: {body.get('tagged', 0)} instrumentos")
+        print(f"Actualizados: {body.get('updated', [])}")
         if body.get('classifications'):
             for c in body['classifications']:
                 print(f"  {c['symbol']}: {c['type']}")

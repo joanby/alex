@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Deploy all Part 6 Lambda functions to AWS using Terraform.
-This script ensures Lambda functions are properly updated by:
-1. Optionally packaging the Lambda functions
-2. Tainting Lambda resources in Terraform to force recreation
-3. Running terraform apply to deploy with the latest code
+Despliega todas las funciones Lambda de la Parte 6 en AWS usando Terraform.
+Este script asegura que las funciones Lambda se actualicen correctamente mediante:
+1. Empaquetar opcionalmente las funciones Lambda
+2. "Taint" de los recursos Lambda en Terraform para forzar su recreación
+3. Ejecutar terraform apply para desplegar con el código más reciente
 
-Usage:
+Uso:
     cd backend
     uv run deploy_all_lambdas.py [--package]
     
-Options:
-    --package    Force re-packaging of all Lambda functions before deployment
+Opciones:
+    --package    Fuerza el empaquetado de todas las funciones Lambda antes del despliegue
 """
 
 import boto3
@@ -23,26 +23,26 @@ from typing import List, Tuple
 
 def taint_and_deploy_via_terraform() -> bool:
     """
-    Deploy Lambda functions using Terraform with forced recreation.
+    Despliega las funciones Lambda usando Terraform con recreación forzada.
     
     Returns:
-        True if successful, False otherwise
+        True si tiene éxito, False en caso contrario
     """
-    # Change to terraform directory
+    # Cambiar al directorio de terraform
     terraform_dir = Path(__file__).parent.parent / "terraform" / "6_agents"
     if not terraform_dir.exists():
-        print(f"❌ Terraform directory not found: {terraform_dir}")
+        print(f"❌ Directorio de Terraform no encontrado: {terraform_dir}")
         return False
     
-    # Lambda function names to taint
+    # Nombres de funciones Lambda a taint
     lambda_functions = ['planner', 'tagger', 'reporter', 'charter', 'retirement']
     
-    print("📌 Step 1: Tainting Lambda functions to force recreation...")
+    print("📌 Paso 1: Realizando taint de funciones Lambda para forzar recreación...")
     print("-" * 50)
     
-    # Taint each Lambda function
+    # Taint de cada función Lambda
     for func in lambda_functions:
-        print(f"   Tainting aws_lambda_function.{func}...")
+        print(f"   Realizando taint a aws_lambda_function.{func}...")
         result = subprocess.run(
             ['terraform', 'taint', f'aws_lambda_function.{func}'],
             cwd=terraform_dir,
@@ -51,53 +51,53 @@ def taint_and_deploy_via_terraform() -> bool:
         )
         
         if result.returncode == 0 or "already" in result.stderr:
-            print(f"      ✓ {func} marked for recreation")
+            print(f"      ✓ {func} marcada para recreación")
         elif "No such resource instance" in result.stderr:
-            print(f"      ⚠️ {func} doesn't exist (will be created)")
+            print(f"      ⚠️ {func} no existe (se creará)")
         else:
-            print(f"      ⚠️ Warning: {result.stderr[:100]}")
+            print(f"      ⚠️ Advertencia: {result.stderr[:100]}")
     
     print()
-    print("🚀 Step 2: Running terraform apply...")
+    print("🚀 Paso 2: Ejecutando terraform apply...")
     print("-" * 50)
     
-    # Run terraform apply
+    # Ejecutar terraform apply
     result = subprocess.run(
         ['terraform', 'apply', '-auto-approve'],
         cwd=terraform_dir,
-        capture_output=False,  # Show output directly
+        capture_output=False,  # Mostrar salida directamente
         text=True
     )
     
     if result.returncode == 0:
         print()
-        print("✅ Terraform deployment completed successfully!")
+        print("✅ ¡Despliegue de Terraform completado exitosamente!")
         return True
     else:
         print()
-        print("❌ Terraform deployment failed!")
+        print("❌ ¡El despliegue de Terraform falló!")
         return False
 
 def package_lambda(service_name: str, service_dir: Path) -> bool:
     """
-    Package a Lambda function using package_docker.py.
+    Empaqueta una función Lambda usando package_docker.py.
     
     Args:
-        service_name: Name of the service (e.g., 'planner')
-        service_dir: Path to the service directory
+        service_name: Nombre del servicio (por ejemplo, 'planner')
+        service_dir: Ruta al directorio del servicio
         
     Returns:
-        True if successful, False otherwise
+        True si tiene éxito, False en caso contrario
     """
-    print(f"   📦 Packaging {service_name}...")
+    print(f"   📦 Empaquetando {service_name}...")
     
     package_script = service_dir / 'package_docker.py'
     if not package_script.exists():
-        print(f"      ✗ package_docker.py not found in {service_dir}")
+        print(f"      ✗ package_docker.py no encontrado en {service_dir}")
         return False
     
     try:
-        # Run uv run package_docker.py in the service directory
+        # Ejecutar uv run package_docker.py en el directorio del servicio
         result = subprocess.run(
             ['uv', 'run', 'package_docker.py'],
             cwd=service_dir,
@@ -106,46 +106,46 @@ def package_lambda(service_name: str, service_dir: Path) -> bool:
         )
         
         if result.returncode == 0:
-            # Check if zip was created
+            # Verificar si se creó el zip
             zip_path = service_dir / f'{service_name}_lambda.zip'
             if zip_path.exists():
                 size_mb = zip_path.stat().st_size / (1024 * 1024)
-                print(f"      ✓ Created {size_mb:.1f} MB package")
+                print(f"      ✓ Paquete de {size_mb:.1f} MB creado")
                 return True
             else:
-                print(f"      ✗ Package not created")
+                print(f"      ✗ Paquete no creado")
                 return False
         else:
-            print(f"      ✗ Packaging failed: {result.stderr}")
+            print(f"      ✗ Falló el empaquetado: {result.stderr}")
             return False
             
     except Exception as e:
-        print(f"      ✗ Error running package_docker.py: {e}")
+        print(f"      ✗ Error al ejecutar package_docker.py: {e}")
         return False
 
 def main():
-    """Main deployment function."""
-    # Check for --package flag
+    """Función principal de despliegue."""
+    # Comprobar flag --package
     force_package = '--package' in sys.argv
     
-    print("🎯 Deploying Alex Agent Lambda Functions (via Terraform)")
+    print("🎯 Desplegando funciones Lambda del Agente Alex (vía Terraform)")
     print("=" * 50)
     
-    # Get AWS account ID
+    # Obtener el ID de cuenta AWS
     try:
         sts_client = boto3.client('sts')
         account_id = sts_client.get_caller_identity()['Account']
         region = boto3.Session().region_name
-        print(f"AWS Account: {account_id}")
-        print(f"AWS Region: {region}")
+        print(f"Cuenta AWS: {account_id}")
+        print(f"Región AWS: {region}")
     except Exception as e:
-        print(f"❌ Failed to get AWS account info: {e}")
-        print("   Make sure your AWS credentials are configured")
+        print(f"❌ Error al obtener la información de la cuenta AWS: {e}")
+        print("   Asegúrate de que tus credenciales de AWS están configuradas")
         sys.exit(1)
     
     print()
     
-    # Define Lambda functions to check/package
+    # Definir funciones Lambda a comprobar/empaquetar
     backend_dir = Path(__file__).parent
     services = [
         ('planner', backend_dir / 'planner' / 'planner_lambda.zip'),
@@ -155,28 +155,28 @@ def main():
         ('retirement', backend_dir / 'retirement' / 'retirement_lambda.zip'),
     ]
     
-    # Check if packages exist and optionally package them
-    print("📋 Checking deployment packages...")
+    # Comprobar si existen paquetes y empaquetar opcionalmente
+    print("📋 Comprobando paquetes de despliegue...")
     services_to_package = []
     
     for service_name, zip_path in services:
         service_dir = backend_dir / service_name
         
         if force_package:
-            # Force re-packaging all services
+            # Forzar el empaquetado de todos los servicios
             services_to_package.append((service_name, service_dir))
-            print(f"   ⟳ {service_name}: Will re-package")
+            print(f"   ⟳ {service_name}: Se volverá a empaquetar")
         elif zip_path.exists():
             size_mb = zip_path.stat().st_size / (1024 * 1024)
             print(f"   ✓ {service_name}: {size_mb:.1f} MB")
         else:
-            print(f"   ✗ {service_name}: Not found")
+            print(f"   ✗ {service_name}: No encontrado")
             services_to_package.append((service_name, service_dir))
     
-    # Package missing or all services if requested
+    # Empaquetar servicios faltantes o todos si se solicita
     if services_to_package:
         print()
-        print("📦 Packaging Lambda functions...")
+        print("📦 Empaquetando funciones Lambda...")
         failed_packages = []
         
         for service_name, service_dir in services_to_package:
@@ -185,36 +185,36 @@ def main():
         
         if failed_packages:
             print()
-            print(f"❌ Failed to package: {', '.join(failed_packages)}")
-            print("   Make sure Docker is running and package_docker.py exists")
-            response = input("Continue anyway? (y/N): ")
+            print(f"❌ Falló el empaquetado de: {', '.join(failed_packages)}")
+            print("   Asegúrate de que Docker esté corriendo y que exista package_docker.py")
+            response = input("¿Continuar de todos modos? (y/N): ")
             if response.lower() != 'y':
                 sys.exit(1)
     
     print()
     
-    # Deploy via Terraform with forced recreation
+    # Desplegar vía Terraform con recreación forzada
     if taint_and_deploy_via_terraform():
         print()
-        print("🎉 All Lambda functions deployed successfully!")
+        print("🎉 ¡Todas las funciones Lambda se desplegaron exitosamente!")
         print()
-        print("⚠️  IMPORTANT: Lambda functions were FORCE RECREATED")
-        print("   This ensures your latest code is running in AWS")
+        print("⚠️  IMPORTANTE: Las funciones Lambda fueron RECREADAS FORZADAMENTE")
+        print("   Esto asegura que tu código más reciente está corriendo en AWS")
         print()
-        print("Next steps:")
-        print("   1. Test locally: cd <service> && uv run test_simple.py")
-        print("   2. Run integration test: cd backend && uv run test_full.py")
-        print("   3. Monitor CloudWatch Logs for each function")
+        print("Siguientes pasos:")
+        print("   1. Prueba local: cd <servicio> && uv run test_simple.py")
+        print("   2. Prueba de integración: cd backend && uv run test_full.py")
+        print("   3. Monitorea los logs de CloudWatch para cada función")
         sys.exit(0)
     else:
         print()
-        print("❌ Deployment failed!")
+        print("❌ ¡El despliegue falló!")
         print()
-        print("💡 Troubleshooting tips:")
-        print("   1. Check terraform output for errors")
-        print("   2. Ensure all packages exist (use --package flag)")
-        print("   3. Verify AWS credentials and permissions")
-        print("   4. Check terraform state: cd terraform/6_agents && terraform plan")
+        print("💡 Consejos de resolución de problemas:")
+        print("   1. Revisa la salida de terraform en busca de errores")
+        print("   2. Asegúrate de que todos los paquetes existan (usa la bandera --package)")
+        print("   3. Verifica credenciales y permisos de AWS")
+        print("   4. Chequea el estado de terraform: cd terraform/6_agents && terraform plan")
         sys.exit(1)
 
 if __name__ == "__main__":

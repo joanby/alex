@@ -1,6 +1,6 @@
 """
 InstrumentTagger Lambda Handler
-Classifies financial instruments and updates the database.
+Clasifica instrumentos financieros y actualiza la base de datos.
 """
 
 import os
@@ -14,43 +14,43 @@ from src.schemas import InstrumentCreate
 from agent import tag_instruments, classification_to_db_format
 from observability import observe
 
-# Configure logging
+# Configurar logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize database
+# Inicializar base de datos
 db = Database()
 
 async def process_instruments(instruments: List[Dict[str, str]]) -> Dict[str, Any]:
     """
-    Process and classify instruments asynchronously.
+    Procesa y clasifica instrumentos de manera asíncrona.
     
     Args:
-        instruments: List of instruments to classify
+        instruments: Lista de instrumentos a clasificar
         
     Returns:
-        Processing results
+        Resultados del procesamiento
     """
-    # Run the classification
-    logger.info(f"Classifying {len(instruments)} instruments")
+    # Ejecutar la clasificación
+    logger.info(f"Clasificando {len(instruments)} instrumentos")
     classifications = await tag_instruments(instruments)
     
-    # Update database with classifications
+    # Actualizar base de datos con clasificaciones
     updated = []
     errors = []
     
     for classification in classifications:
         try:
-            # Convert to database format
+            # Convertir a formato de base de datos
             db_instrument = classification_to_db_format(classification)
             
-            # Check if instrument exists
+            # Comprobar si el instrumento existe
             existing = db.instruments.find_by_symbol(classification.symbol)
             
             if existing:
-                # Update existing instrument
+                # Actualizar instrumento existente
                 update_data = db_instrument.model_dump()
-                # Remove symbol as it's the key
+                # Eliminar el símbolo ya que es la clave
                 del update_data['symbol']
                 
                 rows = db.client.update(
@@ -59,22 +59,22 @@ async def process_instruments(instruments: List[Dict[str, str]]) -> Dict[str, An
                     "symbol = :symbol",
                     {'symbol': classification.symbol}
                 )
-                logger.info(f"Updated {classification.symbol} in database ({rows} rows)")
+                logger.info(f"Actualizado {classification.symbol} en la base de datos ({rows} filas)")
             else:
-                # Create new instrument
+                # Crear nuevo instrumento
                 db.instruments.create_instrument(db_instrument)
-                logger.info(f"Created {classification.symbol} in database")
+                logger.info(f"Creado {classification.symbol} en la base de datos")
             
             updated.append(classification.symbol)
             
         except Exception as e:
-            logger.error(f"Error updating {classification.symbol}: {e}")
+            logger.error(f"Error actualizando {classification.symbol}: {e}")
             errors.append({
                 'symbol': classification.symbol,
                 'error': str(e)
             })
     
-    # Prepare response (convert Pydantic models to dicts)
+    # Preparar la respuesta (convertir modelos Pydantic a diccionarios)
     return {
         'tagged': len(classifications),
         'updated': updated,
@@ -95,9 +95,9 @@ async def process_instruments(instruments: List[Dict[str, str]]) -> Dict[str, An
 
 def lambda_handler(event, context):
     """
-    Lambda handler for instrument tagging.
+    Handler Lambda para el etiquetado de instrumentos.
 
-    Expected event format:
+    Formato esperado del evento:
     {
         "instruments": [
             {"symbol": "VTI", "name": "Vanguard Total Stock Market ETF"},
@@ -105,19 +105,19 @@ def lambda_handler(event, context):
         ]
     }
     """
-    # Wrap entire handler with observability context
+    # Envolver todo el handler en el contexto de observabilidad
     with observe():
         try:
-            # Parse the event
+            # Parsear el evento
             instruments = event.get('instruments', [])
 
             if not instruments:
                 return {
                     'statusCode': 400,
-                    'body': json.dumps({'error': 'No instruments provided'})
+                    'body': json.dumps({'error': 'No se proporcionaron instrumentos'})
                 }
 
-            # Process all instruments in a single async context
+            # Procesar todos los instrumentos en un único contexto asíncrono
             result = asyncio.run(process_instruments(instruments))
 
             return {
@@ -126,7 +126,7 @@ def lambda_handler(event, context):
             }
 
         except Exception as e:
-            logger.error(f"Lambda handler error: {e}")
+            logger.error(f"Error en lambda handler: {e}")
             return {
                 'statusCode': 500,
                 'body': json.dumps({'error': str(e)})

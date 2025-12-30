@@ -1,6 +1,6 @@
 """
-Aurora Data API Client Wrapper
-Provides a simple interface for database operations
+Wrapper del Cliente Aurora Data API
+Proporciona una interfaz sencilla para operaciones de base de datos
 """
 
 import boto3
@@ -12,19 +12,19 @@ from decimal import Decimal
 from botocore.exceptions import ClientError
 import logging
 
-# Try to load .env file if it exists
+# Intentar cargar el archivo .env si existe
 try:
     from dotenv import load_dotenv
 
     load_dotenv(override=True)
 except ImportError:
-    pass  # dotenv not installed, continue without it
+    pass  # dotenv no está instalado, continuar sin él
 
 logger = logging.getLogger(__name__)
 
 
 class DataAPIClient:
-    """Wrapper for AWS RDS Data API to simplify database operations"""
+    """Wrapper para AWS RDS Data API para simplificar operaciones de base de datos"""
 
     def __init__(
         self,
@@ -34,13 +34,13 @@ class DataAPIClient:
         region: str = None,
     ):
         """
-        Initialize Data API client
+        Inicializar el cliente Data API
 
         Args:
-            cluster_arn: Aurora cluster ARN (or from env AURORA_CLUSTER_ARN)
-            secret_arn: Secrets Manager ARN (or from env AURORA_SECRET_ARN)
-            database: Database name (or from env AURORA_DATABASE)
-            region: AWS region (or from env AWS_REGION)
+            cluster_arn: ARN del clúster de Aurora (o desde env AURORA_CLUSTER_ARN)
+            secret_arn: ARN de Secrets Manager (o desde env AURORA_SECRET_ARN)
+            database: Nombre de la base de datos (o desde env AURORA_DATABASE)
+            region: Región de AWS (o desde env AWS_REGION)
         """
         self.cluster_arn = cluster_arn or os.environ.get("AURORA_CLUSTER_ARN")
         self.secret_arn = secret_arn or os.environ.get("AURORA_SECRET_ARN")
@@ -48,8 +48,8 @@ class DataAPIClient:
 
         if not self.cluster_arn or not self.secret_arn:
             raise ValueError(
-                "Missing required Aurora configuration. "
-                "Set AURORA_CLUSTER_ARN and AURORA_SECRET_ARN environment variables."
+                "Falta la configuración requerida de Aurora. "
+                "Establezca las variables de entorno AURORA_CLUSTER_ARN y AURORA_SECRET_ARN."
             )
 
         self.region = os.environ.get("DEFAULT_AWS_REGION", "us-east-1")
@@ -57,14 +57,14 @@ class DataAPIClient:
 
     def execute(self, sql: str, parameters: List[Dict] = None) -> Dict:
         """
-        Execute a SQL statement
+        Ejecuta una sentencia SQL
 
         Args:
-            sql: SQL statement to execute
-            parameters: Optional list of parameters for prepared statement
+            sql: Sentencia SQL a ejecutar
+            parameters: Lista opcional de parámetros para consulta preparada
 
         Returns:
-            Response from Data API
+            Respuesta de Data API
         """
         try:
             kwargs = {
@@ -72,7 +72,7 @@ class DataAPIClient:
                 "secretArn": self.secret_arn,
                 "database": self.database,
                 "sql": sql,
-                "includeResultMetadata": True,  # Include column names
+                "includeResultMetadata": True,  # Incluir nombres de columna
             }
 
             if parameters:
@@ -82,29 +82,29 @@ class DataAPIClient:
             return response
 
         except ClientError as e:
-            logger.error(f"Database error: {e}")
+            logger.error(f"Error de base de datos: {e}")
             raise
 
     def query(self, sql: str, parameters: List[Dict] = None) -> List[Dict]:
         """
-        Execute a SELECT query and return results as list of dicts
+        Ejecuta una consulta SELECT y retorna resultados como lista de diccionarios
 
         Args:
-            sql: SELECT statement
-            parameters: Optional parameters
+            sql: Sentencia SELECT
+            parameters: Parámetros opcionales
 
         Returns:
-            List of dictionaries with column names as keys
+            Lista de diccionarios con nombres de columnas como claves
         """
         response = self.execute(sql, parameters)
 
         if "records" not in response:
             return []
 
-        # Extract column names
+        # Extraer nombres de columnas
         columns = [col["name"] for col in response.get("columnMetadata", [])]
 
-        # Convert records to dictionaries
+        # Convertir registros a diccionarios
         results = []
         for record in response["records"]:
             row = {}
@@ -117,34 +117,34 @@ class DataAPIClient:
 
     def query_one(self, sql: str, parameters: List[Dict] = None) -> Optional[Dict]:
         """
-        Execute a SELECT query and return first result
+        Ejecuta una consulta SELECT y retorna el primer resultado
 
         Args:
-            sql: SELECT statement
-            parameters: Optional parameters
+            sql: Sentencia SELECT
+            parameters: Parámetros opcionales
 
         Returns:
-            Dictionary with column names as keys, or None if no results
+            Diccionario con nombres de columnas como claves, o None si no hay resultados
         """
         results = self.query(sql, parameters)
         return results[0] if results else None
 
     def insert(self, table: str, data: Dict, returning: str = None) -> str:
         """
-        Insert a record into a table
+        Inserta un registro en una tabla
 
         Args:
-            table: Table name
-            data: Dictionary of column names and values
-            returning: Column to return (e.g., 'id', 'clerk_user_id')
+            table: Nombre de la tabla
+            data: Diccionario de nombres de columnas y valores
+            returning: Columna a retornar (ej. 'id', 'clerk_user_id')
 
         Returns:
-            Value of returning column if specified
+            Valor de la columna retornada si se especificó
         """
         columns = list(data.keys())
         placeholders = []
 
-        # Check if columns need type casting
+        # Verifica si alguna columna necesita 'type casting'
         for col in columns:
             if isinstance(data[col], (dict, list)):
                 placeholders.append(f":{col}::jsonb")
@@ -162,32 +162,32 @@ class DataAPIClient:
             VALUES ({", ".join(placeholders)})
         """
 
-        # Add RETURNING clause if specified
+        # Añadir cláusula RETURNING si se especificó
         if returning:
             sql += f" RETURNING {returning}"
 
         parameters = self._build_parameters(data)
         response = self.execute(sql, parameters)
 
-        # Return value if RETURNING was used
+        # Retorna el valor si se usó RETURNING
         if returning and response.get("records"):
             return self._extract_value(response["records"][0][0])
         return None
 
     def update(self, table: str, data: Dict, where: str, where_params: Dict = None) -> int:
         """
-        Update records in a table
+        Actualiza registros en una tabla
 
         Args:
-            table: Table name
-            data: Dictionary of columns to update
-            where: WHERE clause (without WHERE keyword)
-            where_params: Parameters for WHERE clause
+            table: Nombre de la tabla
+            data: Diccionario de columnas a actualizar
+            where: Cláusula WHERE (sin la palabra WHERE)
+            where_params: Parámetros para la cláusula WHERE
 
         Returns:
-            Number of affected rows
+            Número de filas afectadas
         """
-        # Build SET clause with type casting where needed
+        # Construye la cláusula SET con 'type casting' cuando sea necesario
         set_parts = []
         for col, val in data.items():
             if isinstance(val, (dict, list)):
@@ -209,7 +209,7 @@ class DataAPIClient:
             WHERE {where}
         """
 
-        # Combine data and where parameters
+        # Combina los parámetros de data y where
         all_params = {**data, **(where_params or {})}
         parameters = self._build_parameters(all_params)
 
@@ -218,15 +218,15 @@ class DataAPIClient:
 
     def delete(self, table: str, where: str, where_params: Dict = None) -> int:
         """
-        Delete records from a table
+        Elimina registros de una tabla
 
         Args:
-            table: Table name
-            where: WHERE clause (without WHERE keyword)
-            where_params: Parameters for WHERE clause
+            table: Nombre de la tabla
+            where: Cláusula WHERE (sin la palabra WHERE)
+            where_params: Parámetros para la cláusula WHERE
 
         Returns:
-            Number of deleted rows
+            Número de filas eliminadas
         """
         sql = f"DELETE FROM {table} WHERE {where}"
         parameters = self._build_parameters(where_params) if where_params else None
@@ -235,26 +235,26 @@ class DataAPIClient:
         return response.get("numberOfRecordsUpdated", 0)
 
     def begin_transaction(self) -> str:
-        """Begin a database transaction"""
+        """Inicia una transacción de base de datos"""
         response = self.client.begin_transaction(
             resourceArn=self.cluster_arn, secretArn=self.secret_arn, database=self.database
         )
         return response["transactionId"]
 
     def commit_transaction(self, transaction_id: str):
-        """Commit a database transaction"""
+        """Confirma una transacción de base de datos"""
         self.client.commit_transaction(
             resourceArn=self.cluster_arn, secretArn=self.secret_arn, transactionId=transaction_id
         )
 
     def rollback_transaction(self, transaction_id: str):
-        """Rollback a database transaction"""
+        """Revierte una transacción de base de datos"""
         self.client.rollback_transaction(
             resourceArn=self.cluster_arn, secretArn=self.secret_arn, transactionId=transaction_id
         )
 
     def _build_parameters(self, data: Dict) -> List[Dict]:
-        """Convert dictionary to Data API parameter format"""
+        """Convierte un diccionario al formato de parámetros de Data API"""
         if not data:
             return []
 
@@ -286,7 +286,7 @@ class DataAPIClient:
         return parameters
 
     def _extract_value(self, field: Dict) -> Any:
-        """Extract value from Data API field response"""
+        """Extrae el valor desde la respuesta del campo de Data API"""
         if field.get("isNull"):
             return None
         elif "booleanValue" in field:
@@ -297,7 +297,7 @@ class DataAPIClient:
             return field["doubleValue"]
         elif "stringValue" in field:
             value = field["stringValue"]
-            # Try to parse JSON if it looks like JSON
+            # Intentar interpretar como JSON si parece ser JSON
             if value and value[0] in ["{", "["]:
                 try:
                     return json.loads(value)

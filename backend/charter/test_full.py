@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Full test for Charter agent via Lambda
+Prueba completa para el agente Charter vía Lambda
 """
 
 import json
@@ -15,12 +15,12 @@ load_dotenv(override=True)
 
 
 def test_charter_lambda():
-    """Test the Charter agent via Lambda invocation"""
+    """Probar el agente Charter vía invocación Lambda"""
 
     db = Database()
     lambda_client = boto3.client("lambda")
 
-    # Create test job
+    # Crear trabajo de prueba
     test_user_id = "test_user_001"
 
     job_create = JobCreate(
@@ -30,7 +30,7 @@ def test_charter_lambda():
     )
     job_id = db.jobs.create(job_create.model_dump())
 
-    # Load portfolio data for the test
+    # Cargar datos de portfolio para la prueba
     user = db.users.find_by_clerk_id(test_user_id)
     accounts = db.accounts.find_by_user(test_user_id)
 
@@ -63,10 +63,10 @@ def test_charter_lambda():
 
         portfolio_data["accounts"].append(account_data)
 
-    print(f"Testing Charter Lambda with job {job_id}")
+    print(f"Probando Charter Lambda con el trabajo {job_id}")
     print("=" * 60)
 
-    # Invoke Lambda
+    # Invocar Lambda
     try:
         response = lambda_client.invoke(
             FunctionName="alex-charter",
@@ -75,23 +75,23 @@ def test_charter_lambda():
         )
 
         result = json.loads(response["Payload"].read())
-        print(f"Lambda Response: {json.dumps(result, indent=2)}")
+        print(f"Respuesta de Lambda: {json.dumps(result, indent=2)}")
 
-        # Check database for results
-        time.sleep(2)  # Give it a moment
+        # Consultar la base de datos por resultados
+        time.sleep(2)  # Dale un momento
         job = db.jobs.find_by_id(job_id)
 
         if job and job.get("charts_payload"):
-            print(f"\n📊 Charts Created ({len(job['charts_payload'])} total):")
+            print(f"\n📊 Gráficas creadas ({len(job['charts_payload'])} en total):")
             print("=" * 50)
             for chart_key, chart_data in job["charts_payload"].items():
-                print(f"\n🎯 Chart: {chart_key}")
-                print(f"   Title: {chart_data.get('title', 'N/A')}")
-                print(f"   Type: {chart_data.get('type', 'N/A')}")
-                print(f"   Description: {chart_data.get('description', 'N/A')}")
+                print(f"\n🎯 Gráfica: {chart_key}")
+                print(f"   Título: {chart_data.get('title', 'N/A')}")
+                print(f"   Tipo: {chart_data.get('type', 'N/A')}")
+                print(f"   Descripción: {chart_data.get('description', 'N/A')}")
 
                 data_points = chart_data.get("data", [])
-                print(f"   Data Points ({len(data_points)}):")
+                print(f"   Puntos de datos ({len(data_points)}):")
                 for i, point in enumerate(data_points):
                     name = point.get("name", "N/A")
                     value = point.get("value", 0)
@@ -99,10 +99,10 @@ def test_charter_lambda():
                     print(f"     {i+1}. {name}: ${value:,.2f} {color}")
 
         else:
-            print("\n❌ No charts found in database")
+            print("\n❌ No se encontraron gráficas en la base de datos")
 
     except Exception as e:
-        print(f"Error invoking Lambda: {e}")
+        print(f"Error al invocar Lambda: {e}")
 
     print("=" * 60)
 

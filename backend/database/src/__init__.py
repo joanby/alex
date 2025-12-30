@@ -1,12 +1,12 @@
 """
-Database package for Alex Financial Planner
-Provides database models, schemas, and Data API client
+Paquete de base de datos para Alex Financial Planner
+Proporciona modelos de base de datos, esquemas y cliente de la Data API
 """
 
 from .client import DataAPIClient
 from .models import Database
 from .schemas import (
-    # Types
+    # Tipos
     RegionType,
     AssetClassType,
     SectorType,
@@ -15,7 +15,7 @@ from .schemas import (
     JobStatus,
     AccountType,
     
-    # Create schemas (for inputs)
+    # Esquemas de creación (para entradas)
     InstrumentCreate,
     UserCreate,
     AccountCreate,
@@ -23,7 +23,7 @@ from .schemas import (
     JobCreate,
     JobUpdate,
     
-    # Response schemas (for outputs)
+    # Esquemas de respuesta (para salidas)
     InstrumentResponse,
     PortfolioAnalysis,
     RebalanceRecommendation,

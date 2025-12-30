@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Full test for Tagger agent via Lambda
+Test completo del agente Tagger a través de Lambda
 """
 
 import os
@@ -13,23 +13,23 @@ load_dotenv(override=True)
 from src import Database
 
 def test_tagger_lambda():
-    """Test the Tagger agent via Lambda invocation"""
+    """Test del agente Tagger mediante invocación Lambda"""
     
     db = Database()
     lambda_client = boto3.client('lambda')
     
-    # Test instruments that need tagging
+    # Instrumentos de prueba que necesitan etiquetado
     test_instruments = [
         {"symbol": "ARKK", "name": "ARK Innovation ETF"},
         {"symbol": "SOFI", "name": "SoFi Technologies Inc"},
         {"symbol": "TSLA", "name": "Tesla Inc"}
     ]
     
-    print("Testing Tagger Lambda")
+    print("Probando Tagger Lambda")
     print("=" * 60)
-    print(f"Instruments to tag: {[i['symbol'] for i in test_instruments]}")
+    print(f"Instrumentos a etiquetar: {[i['symbol'] for i in test_instruments]}")
     
-    # Invoke Lambda
+    # Invocar Lambda
     try:
         response = lambda_client.invoke(
             FunctionName='alex-tagger',
@@ -38,24 +38,24 @@ def test_tagger_lambda():
         )
         
         result = json.loads(response['Payload'].read())
-        print(f"\nLambda Response: {json.dumps(result, indent=2)}")
+        print(f"\nRespuesta Lambda: {json.dumps(result, indent=2)}")
         
-        # Check database for updated instruments
-        print("\n✅ Checking database for tagged instruments:")
+        # Comprobar base de datos para instrumentos actualizados
+        print("\n✅ Comprobando base de datos para instrumentos etiquetados:")
         for inst in test_instruments:
             instrument = db.instruments.find_by_symbol(inst['symbol'])
             if instrument:
                 if instrument.get('allocation_asset_class'):
-                    print(f"  ✅ {inst['symbol']}: Tagged successfully")
-                    print(f"     Asset: {instrument.get('allocation_asset_class')}")
-                    print(f"     Regions: {instrument.get('allocation_regions')}")
+                    print(f"  ✅ {inst['symbol']}: Etiquetado correctamente")
+                    print(f"     Clase de activo: {instrument.get('allocation_asset_class')}")
+                    print(f"     Regiones: {instrument.get('allocation_regions')}")
                 else:
-                    print(f"  ❌ {inst['symbol']}: No allocations found")
+                    print(f"  ❌ {inst['symbol']}: No se encontraron asignaciones")
             else:
-                print(f"  ⚠️  {inst['symbol']}: Not found in database")
+                print(f"  ⚠️  {inst['symbol']}: No encontrado en la base de datos")
                 
     except Exception as e:
-        print(f"Error invoking Lambda: {e}")
+        print(f"Error al invocar Lambda: {e}")
     
     print("=" * 60)
 

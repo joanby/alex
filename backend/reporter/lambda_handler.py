@@ -1,5 +1,5 @@
 """
-Report Writer Agent Lambda Handler
+Manejador Lambda del Agente Generador de Reportes
 """
 
 import os
@@ -14,7 +14,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from litellm.exceptions import RateLimitError
 from judge import evaluate
 
-GUARD_AGAINST_SCORE = 0.3  # Guard against score being too low
+GUARD_AGAINST_SCORE = 0.3  # Proteger contra puntajes demasiado bajos
 
 try:
     from dotenv import load_dotenv
@@ -23,7 +23,7 @@ try:
 except ImportError:
     pass
 
-# Import database package
+# Importar el paquete de base de datos
 from src import Database
 
 from templates import REPORTER_INSTRUCTIONS
@@ -39,7 +39,7 @@ logger.setLevel(logging.INFO)
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=60),
     before_sleep=lambda retry_state: logger.info(
-        f"Reporter: Rate limit hit, retrying in {retry_state.next_action.sleep} seconds..."
+        f"Reporter: Límite de tasa alcanzado, reintentando en {retry_state.next_action.sleep} segundos..."
     ),
 )
 async def run_reporter_agent(
@@ -49,21 +49,21 @@ async def run_reporter_agent(
     db=None,
     observability=None,
 ) -> Dict[str, Any]:
-    """Run the reporter agent to generate analysis."""
+    """Ejecuta el agente generador de reportes para generar el análisis."""
 
-    # Create agent with tools and context
+    # Crear agente con herramientas y contexto
     model, tools, task, context = create_agent(job_id, portfolio_data, user_data, db)
 
-    # Run agent with context
+    # Ejecutar el agente con contexto
     with trace("Reporter Agent"):
-        agent = Agent[ReporterContext](  # Specify the context type
+        agent = Agent[ReporterContext](  # Especificar el tipo de contexto
             name="Report Writer", instructions=REPORTER_INSTRUCTIONS, model=model, tools=tools
         )
 
         result = await Runner.run(
             agent,
             input=task,
-            context=context,  # Pass the context
+            context=context,  # Pasar el contexto
             max_turns=10,
         )
 
@@ -75,13 +75,13 @@ async def run_reporter_agent(
                 score = evaluation.score / 100
                 comment = evaluation.feedback
                 span.score(name="Judge", value=score, data_type="NUMERIC", comment=comment)
-                observation = f"Score: {score} - Feedback: {comment}"
-                observability.create_event(name="Judge Event", status_message=observation)
+                observation = f"Puntuación: {score} - Comentario: {comment}"
+                observability.create_event(name="Evento del Juez", status_message=observation)
                 if score < GUARD_AGAINST_SCORE:
-                    logger.error(f"Reporter score is too low: {score}")
-                    response = "I'm sorry, I'm not able to generate a report for you. Please try again later."
+                    logger.error(f"La puntuación del Reportero es demasiado baja: {score}")
+                    response = "Lo siento, no puedo generar un informe para usted. Por favor, inténtelo de nuevo más tarde."
 
-        # Save the report to database
+        # Guardar el informe en la base de datos
         report_payload = {
             "content": response,
             "generated_at": datetime.utcnow().isoformat(),
@@ -91,47 +91,47 @@ async def run_reporter_agent(
         success = db.jobs.update_report(job_id, report_payload)
 
         if not success:
-            logger.error(f"Failed to save report for job {job_id}")
+            logger.error(f"No se pudo guardar el informe para el trabajo {job_id}")
 
         return {
             "success": success,
-            "message": "Report generated and stored"
+            "message": "Informe generado y almacenado"
             if success
-            else "Report generated but failed to save",
+            else "Informe generado pero no se pudo guardar",
             "final_output": result.final_output,
         }
 
 
 def lambda_handler(event, context):
     """
-    Lambda handler expecting job_id, portfolio_data, and user_data in event.
+    Manejador Lambda esperando job_id, portfolio_data y user_data en el evento.
 
-    Expected event:
+    Evento esperado:
     {
         "job_id": "uuid",
         "portfolio_data": {...},
         "user_data": {...}
     }
     """
-    # Wrap entire handler with observability context
+    # Encapsular todo el manejador en el contexto de observabilidad
     with observe() as observability:
         try:
-            logger.info(f"Reporter Lambda invoked with event: {json.dumps(event)[:500]}")
+            logger.info(f"Lambda del Reportero invocada con evento: {json.dumps(event)[:500]}")
 
-            # Parse event
+            # Analizar evento
             if isinstance(event, str):
                 event = json.loads(event)
 
             job_id = event.get("job_id")
             if not job_id:
-                return {"statusCode": 400, "body": json.dumps({"error": "job_id is required"})}
+                return {"statusCode": 400, "body": json.dumps({"error": "job_id es obligatorio"})}
 
-            # Initialize database
+            # Inicializar base de datos
             db = Database()
 
             portfolio_data = event.get("portfolio_data")
             if not portfolio_data:
-                # Try to load from database
+                # Intentar cargar desde la base de datos
                 try:
                     job = db.jobs.find_by_id(job_id)
                     if job:
@@ -139,7 +139,7 @@ def lambda_handler(event, context):
 
                         if observability:
                             observability.create_event(
-                                name="Reporter Started!", status_message="OK"
+                                name="¡Reportero Iniciado!", status_message="OK"
                             )
                         user = db.users.find_by_clerk_id(user_id)
                         accounts = db.accounts.find_by_user(user_id)
@@ -171,25 +171,25 @@ def lambda_handler(event, context):
                     else:
                         return {
                             "statusCode": 404,
-                            "body": json.dumps({"error": f"Job {job_id} not found"}),
+                            "body": json.dumps({"error": f"Trabajo {job_id} no encontrado"}),
                         }
                 except Exception as e:
-                    logger.error(f"Could not load portfolio from database: {e}")
+                    logger.error(f"No se pudo cargar el portafolio desde la base de datos: {e}")
                     return {
                         "statusCode": 400,
-                        "body": json.dumps({"error": "No portfolio data provided"}),
+                        "body": json.dumps({"error": "No se proporcionaron datos de portafolio"}),
                     }
 
             user_data = event.get("user_data", {})
             if not user_data:
-                # Try to load from database
+                # Intentar cargar desde la base de datos
                 try:
                     job = db.jobs.find_by_id(job_id)
-                    if job and job.get("clerk_user_id"):
-                        status = f"Job ID: {job_id} Clerk User ID: {job['clerk_user_id']}"
+                    if job in job.get("clerk_user_id"):
+                        status = f"ID de Trabajo: {job_id} ID de Usuario Clerk: {job['clerk_user_id']}"
                         if observability:
                             observability.create_event(
-                                name="Reporter about to run", status_message=status
+                                name="Reportero a punto de ejecutarse", status_message=status
                             )
                         user = db.users.find_by_clerk_id(job["clerk_user_id"])
                         if user:
@@ -205,24 +205,24 @@ def lambda_handler(event, context):
                                 "target_retirement_income": 80000,
                             }
                 except Exception as e:
-                    logger.warning(f"Could not load user data: {e}. Using defaults.")
+                    logger.warning(f"No se pudieron cargar datos de usuario: {e}. Usando valores predeterminados.")
                     user_data = {"years_until_retirement": 30, "target_retirement_income": 80000}
 
-            # Run the agent
+            # Ejecutar el agente
             result = asyncio.run(
                 run_reporter_agent(job_id, portfolio_data, user_data, db, observability)
             )
 
-            logger.info(f"Reporter completed for job {job_id}")
+            logger.info(f"Reportero completado para el trabajo {job_id}")
 
             return {"statusCode": 200, "body": json.dumps(result)}
 
         except Exception as e:
-            logger.error(f"Error in reporter: {e}", exc_info=True)
+            logger.error(f"Error en el reportero: {e}", exc_info=True)
             return {"statusCode": 500, "body": json.dumps({"success": False, "error": str(e)})}
 
 
-# For local testing
+# Para pruebas locales
 if __name__ == "__main__":
     test_event = {
         "job_id": "550e8400-e29b-41d4-a716-446655440002",

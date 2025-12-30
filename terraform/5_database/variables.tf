@@ -1,16 +1,16 @@
 variable "aws_region" {
-  description = "AWS region for resources"
+  description = "Región de AWS para los recursos"
   type        = string
 }
 
 variable "min_capacity" {
-  description = "Minimum capacity for Aurora Serverless v2 (in ACUs)"
+  description = "Capacidad mínima para Aurora Serverless v2 (en ACUs)"
   type        = number
   default     = 0.5
 }
 
 variable "max_capacity" {
-  description = "Maximum capacity for Aurora Serverless v2 (in ACUs)"
+  description = "Capacidad máxima para Aurora Serverless v2 (en ACUs)"
   type        = number
   default     = 1
 }

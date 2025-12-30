@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Seed data for Alex Financial Planner
-Loads 20+ popular ETF instruments with allocation data
+Datos de ejemplo para Alex Financial Planner
+Carga más de 20 ETFs populares con información de asignación
 """
 
 import os
@@ -12,30 +12,30 @@ from src.schemas import InstrumentCreate
 from pydantic import ValidationError
 from dotenv import load_dotenv
 
-# Load environment variables
+# Cargar variables de entorno
 load_dotenv(override=True)
 
-# Get config from environment
+# Obtener la configuración desde el entorno
 cluster_arn = os.environ.get("AURORA_CLUSTER_ARN")
 secret_arn = os.environ.get("AURORA_SECRET_ARN")
 database = os.environ.get("AURORA_DATABASE", "alex")
 region = os.environ.get("DEFAULT_AWS_REGION", "us-east-1")
 
 if not cluster_arn or not secret_arn:
-    print("❌ Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN in .env file")
+    print("❌ Falta AURORA_CLUSTER_ARN o AURORA_SECRET_ARN en el archivo .env")
     exit(1)
 
 client = boto3.client("rds-data", region_name=region)
 
-# Define popular ETF instruments with realistic allocation data
-# All percentages should sum to 100 for each allocation type
+# Definir ETFs populares con datos de asignación realistas
+# Todos los porcentajes deben sumar 100 para cada tipo de asignación
 INSTRUMENTS = [
-    # Core US Equity
+    # Renta variable central EE. UU.
     {
         "symbol": "SPY",
         "name": "SPDR S&P 500 ETF Trust",
         "instrument_type": "etf",
-        "current_price": 450.25,  # Approximate prices as of 2024
+        "current_price": 450.25,  # Precios aproximados a 2024
         "allocation_regions": {"north_america": 100},
         "allocation_sectors": {
             "technology": 28,
@@ -90,7 +90,7 @@ INSTRUMENTS = [
         },
         "allocation_asset_class": {"equity": 100},
     },
-    # International Equity
+    # Renta variable internacional
     {
         "symbol": "VEA",
         "name": "Vanguard FTSE Developed Markets ETF",
@@ -154,7 +154,7 @@ INSTRUMENTS = [
         },
         "allocation_asset_class": {"equity": 100},
     },
-    # Fixed Income
+    # Renta fija
     {
         "symbol": "AGG",
         "name": "iShares Core U.S. Aggregate Bond ETF",
@@ -201,7 +201,7 @@ INSTRUMENTS = [
         "allocation_sectors": {"corporate": 100},
         "allocation_asset_class": {"fixed_income": 100},
     },
-    # Sector ETFs
+    # ETFs sectoriales
     {
         "symbol": "XLK",
         "name": "Technology Select Sector SPDR Fund",
@@ -238,7 +238,7 @@ INSTRUMENTS = [
         "allocation_sectors": {"energy": 100},
         "allocation_asset_class": {"equity": 100},
     },
-    # Real Estate
+    # Bienes raíces
     {
         "symbol": "VNQ",
         "name": "Vanguard Real Estate ETF",
@@ -248,7 +248,7 @@ INSTRUMENTS = [
         "allocation_sectors": {"real_estate": 100},
         "allocation_asset_class": {"real_estate": 100},
     },
-    # Commodities
+    # Materias primas
     {
         "symbol": "GLD",
         "name": "SPDR Gold Shares",
@@ -267,7 +267,7 @@ INSTRUMENTS = [
         "allocation_sectors": {"commodities": 100},
         "allocation_asset_class": {"commodities": 100},
     },
-    # Mixed/Balanced
+    # Mixto/Balanceado
     {
         "symbol": "AOR",
         "name": "iShares Core Growth Allocation ETF",
@@ -286,7 +286,7 @@ INSTRUMENTS = [
         "allocation_sectors": {"diversified": 100},
         "allocation_asset_class": {"equity": 80, "fixed_income": 20},
     },
-    # Growth ETFs
+    # ETFs de crecimiento
     {
         "symbol": "VUG",
         "name": "Vanguard Growth ETF",
@@ -304,7 +304,7 @@ INSTRUMENTS = [
         },
         "allocation_asset_class": {"equity": 100},
     },
-    # Value ETFs
+    # ETFs de valor
     {
         "symbol": "VTV",
         "name": "Vanguard Value ETF",
@@ -325,7 +325,7 @@ INSTRUMENTS = [
         },
         "allocation_asset_class": {"equity": 100},
     },
-    # Dividend ETFs
+    # ETFs de dividendos
     {
         "symbol": "VIG",
         "name": "Vanguard Dividend Appreciation ETF",
@@ -349,15 +349,15 @@ INSTRUMENTS = [
 
 
 def insert_instrument(instrument_data):
-    """Insert a single instrument into the database with Pydantic validation"""
-    # Validate with Pydantic first
+    """Insertar un instrumento en la base de datos con validación Pydantic"""
+    # Validar con Pydantic primero
     try:
         instrument = InstrumentCreate(**instrument_data)
     except ValidationError as e:
-        print(f"    ❌ Validation error: {e}")
+        print(f"    ❌ Error de validación: {e}")
         return False
 
-    # Get validated data
+    # Obtener los datos validados
     validated = instrument.model_dump()
 
     sql = """
@@ -413,12 +413,12 @@ def insert_instrument(instrument_data):
 
 
 def verify_allocations(instrument):
-    """Verify instrument using Pydantic validation"""
+    """Verificar instrumento usando validación Pydantic"""
     try:
         InstrumentCreate(**instrument)
-        return []  # No errors
+        return []  # Sin errores
     except ValidationError as e:
-        # Extract error messages
+        # Extraer mensajes de error
         errors = []
         for error in e.errors():
             field = ".".join(str(x) for x in error["loc"])
@@ -428,12 +428,12 @@ def verify_allocations(instrument):
 
 
 def main():
-    print("🚀 Seeding Instrument Data")
+    print("🚀 Sembrando datos de instrumentos")
     print("=" * 50)
-    print(f"Loading {len(INSTRUMENTS)} instruments...")
+    print(f"Cargando {len(INSTRUMENTS)} instrumentos...")
 
-    # First verify all allocations
-    print("\n📊 Verifying allocation data...")
+    # Primero verificar todas las asignaciones
+    print("\n📊 Verificando los datos de asignación...")
     all_valid = True
     for inst in INSTRUMENTS:
         errors = verify_allocations(inst)
@@ -442,13 +442,13 @@ def main():
             all_valid = False
 
     if not all_valid:
-        print("\n❌ Some instruments have invalid allocations. Please fix before continuing.")
+        print("\n❌ Hay instrumentos con asignaciones no válidas. Corrija antes de continuar.")
         exit(1)
 
-    print("  ✅ All allocations valid!")
+    print("  ✅ ¡Todas las asignaciones son válidas!")
 
-    # Insert instruments
-    print("\n💾 Inserting instruments...")
+    # Insertar instrumentos
+    print("\n💾 Insertando instrumentos...")
     success_count = 0
 
     for inst in INSTRUMENTS:
@@ -456,16 +456,16 @@ def main():
             f"  [{success_count + 1}/{len(INSTRUMENTS)}] {inst['symbol']}: {inst['name'][:40]}..."
         )
         if insert_instrument(inst):
-            print(f"    ✅ Success")
+            print(f"    ✅ Éxito")
             success_count += 1
         else:
-            print(f"    ❌ Failed")
+            print(f"    ❌ Fallido")
 
     print("\n" + "=" * 50)
-    print(f"Seeding complete: {success_count}/{len(INSTRUMENTS)} instruments loaded")
+    print(f"Siembra completa: {success_count}/{len(INSTRUMENTS)} instrumentos cargados")
 
-    # Verify by querying
-    print("\n🔍 Verifying data...")
+    # Verificar mediante consulta
+    print("\n🔍 Verificando los datos...")
     try:
         response = client.execute_statement(
             resourceArn=cluster_arn,
@@ -474,9 +474,9 @@ def main():
             sql="SELECT COUNT(*) as count FROM instruments",
         )
         count = response["records"][0][0]["longValue"]
-        print(f"  Database now contains {count} instruments")
+        print(f"  La base de datos ahora contiene {count} instrumentos")
 
-        # Show a sample
+        # Mostrar una muestra
         response = client.execute_statement(
             resourceArn=cluster_arn,
             secretArn=secret_arn,
@@ -484,19 +484,19 @@ def main():
             sql="SELECT symbol, name FROM instruments ORDER BY symbol LIMIT 5",
         )
 
-        print("\n  Sample instruments:")
+        print("\n  Instrumentos de muestra:")
         for record in response["records"]:
             symbol = record[0]["stringValue"]
             name = record[1]["stringValue"]
             print(f"    - {symbol}: {name}")
 
     except ClientError as e:
-        print(f"  ❌ Error verifying: {e}")
+        print(f"  ❌ Error al verificar: {e}")
 
-    print("\n✅ Seed data loaded successfully!")
-    print("\n📝 Next steps:")
-    print("1. Create test user and portfolio: uv run create_test_data.py")
-    print("2. Test database operations: uv run test_db.py")
+    print("\n✅ ¡Datos de ejemplo cargados exitosamente!")
+    print("\n📝 Siguientes pasos:")
+    print("1. Crear usuario y portafolio de prueba: uv run create_test_data.py")
+    print("2. Probar operaciones de base de datos: uv run test_db.py")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """
-Chart Maker Agent - creates visualization data for portfolio analysis.
+Agente Chart Maker - crea datos de visualización para el análisis de portafolios.
 """
 
 import os
@@ -15,19 +15,19 @@ logger = logging.getLogger()
 
 def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
     """
-    Analyze the portfolio to understand its composition and calculate key metrics.
-    Returns detailed breakdown of positions, accounts, and calculated allocations.
+    Analiza el portafolio para entender su composición y calcular los principales indicadores.
+    Devuelve un desglose detallado de posiciones, cuentas y asignaciones calculadas.
     """
     result = []
     total_value = 0.0
     position_values = {}
     account_totals = {}
 
-    # Calculate position values and totals
+    # Calcular los valores de posición y totales
     for account in portfolio_data.get("accounts", []):
-        account_name = account.get("name", "Unknown")
-        account_type = account.get("type", "unknown")
-        # Handle None or missing cash_balance
+        account_name = account.get("name", "Desconocido")
+        account_type = account.get("type", "desconocido")
+        # Manejar None o cash_balance ausente
         cash_balance = account.get("cash_balance")
         if cash_balance is None or cash_balance == "":
             cash = 0.0
@@ -44,11 +44,11 @@ def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
             symbol = position.get("symbol")
             quantity = float(position.get("quantity", 0))
             instrument = position.get("instrument", {})
-            # Handle None or missing current_price
+            # Manejar None o current_price ausente
             current_price = instrument.get("current_price")
             if current_price is None or current_price == "":
-                price = 1.0  # Default price if not available
-                logger.warning(f"Charter: No price for {symbol}, using default of 1.0")
+                price = 1.0  # Precio por defecto si no está disponible
+                logger.warning(f"Charter: No hay precio para {symbol}, usando el valor por defecto de 1.0")
             else:
                 price = float(current_price)
             value = quantity * price
@@ -60,27 +60,27 @@ def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
             )
             total_value += value
 
-    # Build analysis summary
-    result.append("Portfolio Analysis:")
-    result.append(f"Total Value: ${total_value:,.2f}")
-    result.append(f"Number of Accounts: {len(account_totals)}")
-    result.append(f"Number of Positions: {len(position_values)}")
+    # Construir resumen del análisis
+    result.append("Análisis del Portafolio:")
+    result.append(f"Valor Total: ${total_value:,.2f}")
+    result.append(f"Número de Cuentas: {len(account_totals)}")
+    result.append(f"Número de Posiciones: {len(position_values)}")
 
-    result.append("\nAccount Breakdown:")
+    result.append("\nDetalle por Cuenta:")
     for name, data in account_totals.items():
         pct = (data["value"] / total_value * 100) if total_value > 0 else 0
         result.append(f"  {name} ({data['type']}): ${data['value']:,.2f} ({pct:.1f}%)")
 
-    result.append("\nTop Holdings by Value:")
+    result.append("\nPrincipales posiciones por valor:")
     sorted_positions = sorted(position_values.items(), key=lambda x: x[1], reverse=True)[:10]
     for symbol, value in sorted_positions:
         pct = (value / total_value * 100) if total_value > 0 else 0
         result.append(f"  {symbol}: ${value:,.2f} ({pct:.1f}%)")
 
-    # Calculate aggregated allocations for the agent
-    result.append("\nCalculated Allocations:")
+    # Calcular asignaciones agregadas para el agente
+    result.append("\nAsignaciones Calculadas:")
     
-    # Asset class aggregation
+    # Agregación por clase de activo
     asset_classes = {}
     regions = {}
     sectors = {}
@@ -90,31 +90,31 @@ def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
             symbol = position.get("symbol")
             quantity = float(position.get("quantity", 0))
             instrument = position.get("instrument", {})
-            # Handle None or missing current_price
+            # Manejar None o current_price ausente
             current_price = instrument.get("current_price")
             if current_price is None or current_price == "":
-                price = 1.0  # Default price if not available
-                logger.warning(f"Charter: No price for {symbol}, using default of 1.0")
+                price = 1.0  # Precio por defecto si no está disponible
+                logger.warning(f"Charter: No hay precio para {symbol}, usando el valor por defecto de 1.0")
             else:
                 price = float(current_price)
             value = quantity * price
             
-            # Aggregate asset classes
+            # Agregar por clases de activo
             for asset_class, pct in instrument.get("allocation_asset_class", {}).items():
                 asset_value = value * (pct / 100)
                 asset_classes[asset_class] = asset_classes.get(asset_class, 0) + asset_value
             
-            # Aggregate regions
+            # Agregar por regiones
             for region, pct in instrument.get("allocation_regions", {}).items():
                 region_value = value * (pct / 100)
                 regions[region] = regions.get(region, 0) + region_value
             
-            # Aggregate sectors
+            # Agregar por sectores
             for sector, pct in instrument.get("allocation_sectors", {}).items():
                 sector_value = value * (pct / 100)
                 sectors[sector] = sectors.get(sector, 0) + sector_value
     
-    # Add cash to asset classes
+    # Añadir efectivo a las clases de activo
     total_cash = sum(
         float(acc.get("cash_balance")) if acc.get("cash_balance") is not None else 0
         for acc in portfolio_data.get("accounts", [])
@@ -122,15 +122,15 @@ def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
     if total_cash > 0:
         asset_classes["cash"] = asset_classes.get("cash", 0) + total_cash
     
-    result.append("\nAsset Classes:")
+    result.append("\nClases de Activo:")
     for asset_class, value in sorted(asset_classes.items(), key=lambda x: x[1], reverse=True):
         result.append(f"  {asset_class}: ${value:,.2f}")
     
-    result.append("\nGeographic Regions:")
+    result.append("\nRegiones Geográficas:")
     for region, value in sorted(regions.items(), key=lambda x: x[1], reverse=True):
         result.append(f"  {region}: ${value:,.2f}")
     
-    result.append("\nSectors:")
+    result.append("\nSectores:")
     for sector, value in sorted(sectors.items(), key=lambda x: x[1], reverse=True)[:10]:
         result.append(f"  {sector}: ${value:,.2f}")
 
@@ -138,27 +138,27 @@ def analyze_portfolio(portfolio_data: Dict[str, Any]) -> str:
 
 
 def create_agent(job_id: str, portfolio_data: Dict[str, Any], db=None):
-    """Create the charter agent without tools - will output JSON directly."""
+    """Crear el agente charter sin herramientas - devolverá JSON directamente."""
     
-    # Get model configuration
+    # Obtener la configuración del modelo
     model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
+    # Establecer la región para llamadas LiteLLM Bedrock
     bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
     os.environ["AWS_REGION_NAME"] = bedrock_region
     
-    logger.info(f"Charter: Creating agent with model_id={model_id}, region={bedrock_region}")
-    logger.info(f"Charter: Job ID: {job_id}")
+    logger.info(f"Charter: Creando agente con model_id={model_id}, región={bedrock_region}")
+    logger.info(f"Charter: ID de trabajo: {job_id}")
     
     model = LitellmModel(model=f"bedrock/{model_id}")
     
-    # Analyze the portfolio upfront
+    # Analizar el portafolio por adelantado
     portfolio_analysis = analyze_portfolio(portfolio_data)
-    logger.info(f"Charter: Portfolio analysis generated, length: {len(portfolio_analysis)}")
+    logger.info(f"Charter: Análisis de portafolio generado, longitud: {len(portfolio_analysis)}")
     
-    # Create the task using template
+    # Crear la tarea usando la plantilla
     task = create_charter_task(portfolio_analysis, portfolio_data)
     
-    logger.info(f"Charter: Task created, length: {len(task)} characters")
+    logger.info(f"Charter: Tarea creada, longitud: {len(task)} caracteres")
     
-    # Return model and task (no tools or context needed)
+    # Devolver modelo y tarea (sin herramientas ni contexto necesario)
     return model, task

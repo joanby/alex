@@ -12,32 +12,32 @@ terraform {
     }
   }
   
-  # Using local backend - state will be stored in terraform.tfstate in this directory
-  # This is automatically gitignored for security
+  # Usando backend local - el estado se almacenará en terraform.tfstate en este directorio
+  # Esto es automáticamente ignorado por git por seguridad
 }
 
 provider "aws" {
   region = var.aws_region
 }
 
-# Data source for current caller identity
+# Fuente de datos para la identidad actual del llamador
 data "aws_caller_identity" "current" {}
 
 # ========================================
-# Aurora Serverless v2 PostgreSQL Cluster
+# Cluster Aurora Serverless v2 PostgreSQL
 # ========================================
 
-# Random password for database
+# Contraseña aleatoria para la base de datos
 resource "random_password" "db_password" {
   length  = 32
   special = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
-# Secrets Manager secret for database credentials
+# Secreto de Secrets Manager para credenciales de base de datos
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "alex-aurora-credentials-${random_id.suffix.hex}"
-  recovery_window_in_days = 0  # For development - immediate deletion
+  recovery_window_in_days = 0  # Para desarrollo - eliminación inmediata
   
   tags = {
     Project = "alex"
@@ -57,7 +57,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   })
 }
 
-# DB Subnet Group (using default VPC)
+# Grupo de subredes de BD (usando VPC por defecto)
 data "aws_vpc" "default" {
   default = true
 }
@@ -79,13 +79,13 @@ resource "aws_db_subnet_group" "aurora" {
   }
 }
 
-# Security group for Aurora
+# Grupo de seguridad para Aurora
 resource "aws_security_group" "aurora" {
   name        = "alex-aurora-sg"
-  description = "Security group for Alex Aurora cluster"
+  description = "Grupo de seguridad para el cluster Aurora de Alex"
   vpc_id      = data.aws_vpc.default.id
   
-  # Allow PostgreSQL access from within VPC
+  # Permitir acceso PostgreSQL desde dentro de la VPC
   ingress {
     from_port   = 5432
     to_port     = 5432
@@ -106,7 +106,7 @@ resource "aws_security_group" "aurora" {
   }
 }
 
-# Aurora Serverless v2 Cluster
+# Clúster Aurora Serverless v2
 resource "aws_rds_cluster" "aurora" {
   cluster_identifier     = "alex-aurora-cluster"
   engine                 = "aurora-postgresql"
@@ -116,25 +116,25 @@ resource "aws_rds_cluster" "aurora" {
   master_username        = "alexadmin"
   master_password        = random_password.db_password.result
   
-  # Serverless v2 scaling configuration
+  # Configuración de escalado serverless v2
   serverlessv2_scaling_configuration {
     min_capacity = var.min_capacity
     max_capacity = var.max_capacity
   }
   
-  # Enable Data API
+  # Habilitar API de datos
   enable_http_endpoint = true
   
-  # Networking
+  # Red
   db_subnet_group_name   = aws_db_subnet_group.aurora.name
   vpc_security_group_ids = [aws_security_group.aurora.id]
   
-  # Backup and maintenance
+  # Copia de seguridad y mantenimiento
   backup_retention_period   = 7
   preferred_backup_window   = "03:00-04:00"
   preferred_maintenance_window = "sun:04:00-sun:05:00"
   
-  # Development settings
+  # Configuración de desarrollo
   skip_final_snapshot = true
   apply_immediately   = true
   
@@ -144,7 +144,7 @@ resource "aws_rds_cluster" "aurora" {
   }
 }
 
-# Aurora Serverless v2 Instance
+# Instancia Aurora Serverless v2
 resource "aws_rds_cluster_instance" "aurora" {
   identifier          = "alex-aurora-instance-1"
   cluster_identifier  = aws_rds_cluster.aurora.id
@@ -152,7 +152,7 @@ resource "aws_rds_cluster_instance" "aurora" {
   engine              = aws_rds_cluster.aurora.engine
   engine_version      = aws_rds_cluster.aurora.engine_version
   
-  performance_insights_enabled = false  # Save costs in development
+  performance_insights_enabled = false  # Ahorrar costos en desarrollo
   
   tags = {
     Project = "alex"
@@ -160,7 +160,7 @@ resource "aws_rds_cluster_instance" "aurora" {
   }
 }
 
-# IAM role for Lambda to access Aurora Data API
+# Rol IAM para Lambda para acceder a Aurora Data API
 resource "aws_iam_role" "lambda_aurora_role" {
   name = "alex-lambda-aurora-role"
   
@@ -183,7 +183,7 @@ resource "aws_iam_role" "lambda_aurora_role" {
   }
 }
 
-# IAM policy for Data API access
+# Política IAM para acceso a Data API
 resource "aws_iam_role_policy" "lambda_aurora_policy" {
   name = "alex-lambda-aurora-policy"
   role = aws_iam_role.lambda_aurora_role.id
@@ -222,7 +222,7 @@ resource "aws_iam_role_policy" "lambda_aurora_policy" {
   })
 }
 
-# Attach basic Lambda execution role
+# Adjuntar rol básico de ejecución para Lambda
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_aurora_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"

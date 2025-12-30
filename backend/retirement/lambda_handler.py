@@ -1,5 +1,5 @@
 """
-Retirement Specialist Agent Lambda Handler
+Manejador Lambda del Agente Especialista en Jubilación
 """
 
 import os
@@ -19,7 +19,7 @@ try:
 except ImportError:
     pass
 
-# Import database package
+# Importar paquete de base de datos
 from src import Database
 
 from templates import RETIREMENT_INSTRUCTIONS
@@ -30,23 +30,23 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def get_user_preferences(job_id: str) -> Dict[str, Any]:
-    """Load user preferences from database."""
+    """Cargar preferencias del usuario desde la base de datos."""
     try:
         db = Database()
         
-        # Get the job to find the user
+        # Obtener el trabajo para encontrar el usuario
         job = db.jobs.find_by_id(job_id)
         if job and job.get('clerk_user_id'):
-            # Get user preferences
+            # Obtener las preferencias del usuario
             user = db.users.find_by_clerk_id(job['clerk_user_id'])
             if user:
                 return {
                     'years_until_retirement': user.get('years_until_retirement', 30),
                     'target_retirement_income': float(user.get('target_retirement_income', 80000)),
-                    'current_age': 40  # Default for now
+                    'current_age': 40  # Predeterminado por ahora
                 }
     except Exception as e:
-        logger.warning(f"Could not load user data: {e}. Using defaults.")
+        logger.warning(f"No se pudieron cargar los datos del usuario: {e}. Usando valores predeterminados.")
     
     return {
         'years_until_retirement': 30,
@@ -58,27 +58,27 @@ def get_user_preferences(job_id: str) -> Dict[str, Any]:
     retry=retry_if_exception_type(RateLimitError),
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=60),
-    before_sleep=lambda retry_state: logger.info(f"Retirement: Rate limit hit, retrying in {retry_state.next_action.sleep} seconds...")
+    before_sleep=lambda retry_state: logger.info(f"Jubilación: Se alcanzó el límite de tasa, reintentando en {retry_state.next_action.sleep} segundos...")
 )
 async def run_retirement_agent(job_id: str, portfolio_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Run the retirement specialist agent."""
+    """Ejecutar el agente especialista en jubilación."""
     
-    # Get user preferences
+    # Obtener preferencias del usuario
     user_preferences = get_user_preferences(job_id)
     
-    # Initialize database
+    # Inicializar base de datos
     db = Database()
     
-    # Create agent (simplified - no tools or context)
+    # Crear agente (simplificado - sin herramientas ni contexto)
     model, tools, task = create_agent(job_id, portfolio_data, user_preferences, db)
     
-    # Run agent (simplified - no context)
-    with trace("Retirement Agent"):
+    # Ejecutar agente (simplificado - sin contexto)
+    with trace("Agente de Jubilación"):
         agent = Agent(
-            name="Retirement Specialist",
+            name="Especialista en Jubilación",
             instructions=RETIREMENT_INSTRUCTIONS,
             model=model,
-            tools=tools  # Empty list now
+            tools=tools  # Lista vacía por ahora
         )
         
         result = await Runner.run(
@@ -87,7 +87,7 @@ async def run_retirement_agent(job_id: str, portfolio_data: Dict[str, Any]) -> D
             max_turns=20
         )
         
-        # Save the analysis to database
+        # Guardar el análisis en la base de datos
         retirement_payload = {
             'analysis': result.final_output,
             'generated_at': datetime.utcnow().isoformat(),
@@ -97,30 +97,30 @@ async def run_retirement_agent(job_id: str, portfolio_data: Dict[str, Any]) -> D
         success = db.jobs.update_retirement(job_id, retirement_payload)
         
         if not success:
-            logger.error(f"Failed to save retirement analysis for job {job_id}")
+            logger.error(f"No se pudo guardar el análisis de jubilación para el trabajo {job_id}")
         
         return {
             'success': success,
-            'message': 'Retirement analysis completed' if success else 'Analysis completed but failed to save',
+            'message': 'Análisis de jubilación completado' if success else 'Análisis completado pero falló al guardar',
             'final_output': result.final_output
         }
 
 def lambda_handler(event, context):
     """
-    Lambda handler expecting job_id in event.
+    Manejador Lambda esperando job_id en el evento.
 
-    Expected event:
+    Evento esperado:
     {
         "job_id": "uuid",
-        "portfolio_data": {...}  # Optional, will load from DB if not provided
+        "portfolio_data": {...}  # Opcional, se cargará desde la BD si no se proporciona
     }
     """
-    # Wrap entire handler with observability context
+    # Envuelve todo el manejador con el contexto de observabilidad
     with observe():
         try:
-            logger.info(f"Retirement Lambda invoked with event: {json.dumps(event)[:500]}")
+            logger.info(f"Lambda de Jubilación invocada con el evento: {json.dumps(event)[:500]}")
 
-            # Parse event
+            # Analizar el evento
             if isinstance(event, str):
                 event = json.loads(event)
 
@@ -128,12 +128,12 @@ def lambda_handler(event, context):
             if not job_id:
                 return {
                     'statusCode': 400,
-                    'body': json.dumps({'error': 'job_id is required'})
+                    'body': json.dumps({'error': 'job_id es obligatorio'})
                 }
 
             portfolio_data = event.get('portfolio_data')
             if not portfolio_data:
-                # Try to load from database
+                # Intentar cargar desde la base de datos
                 try:
                     import sys
                     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -146,19 +146,19 @@ def lambda_handler(event, context):
                     else:
                         return {
                             'statusCode': 404,
-                            'body': json.dumps({'error': f'Job {job_id} not found'})
+                            'body': json.dumps({'error': f'Trabajo {job_id} no encontrado'})
                         }
                 except Exception as e:
-                    logger.error(f"Could not load portfolio from database: {e}")
+                    logger.error(f"No se pudo cargar el portafolio desde la base de datos: {e}")
                     return {
                         'statusCode': 400,
-                        'body': json.dumps({'error': 'No portfolio data provided'})
+                        'body': json.dumps({'error': 'No se proporcionaron datos del portafolio'})
                     }
 
-            # Run the agent
+            # Ejecutar el agente
             result = asyncio.run(run_retirement_agent(job_id, portfolio_data))
 
-            logger.info(f"Retirement completed for job {job_id}")
+            logger.info(f"Jubilación completada para el trabajo {job_id}")
 
             return {
                 'statusCode': 200,
@@ -166,7 +166,7 @@ def lambda_handler(event, context):
             }
 
         except Exception as e:
-            logger.error(f"Error in retirement: {e}", exc_info=True)
+            logger.error(f"Error en jubilación: {e}", exc_info=True)
             return {
                 'statusCode': 500,
                 'body': json.dumps({
@@ -175,7 +175,7 @@ def lambda_handler(event, context):
                 })
             }
 
-# For local testing
+# Para pruebas locales
 if __name__ == "__main__":
     test_event = {
         "job_id": "test-retirement-123",

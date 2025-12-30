@@ -8,28 +8,28 @@ terraform {
     }
   }
   
-  # Using local backend - state will be stored in terraform.tfstate in this directory
-  # This is automatically gitignored for security
+  # Usando backend local - el estado se almacenará en terraform.tfstate en este directorio
+  # Esto se ignora automáticamente en git por seguridad
 }
 
 provider "aws" {
   region = var.aws_region
 }
 
-# Data source for current caller identity
+# Fuente de datos para la identidad actual del llamador
 data "aws_caller_identity" "current" {}
 
 # ========================================
-# SQS Queue for Async Job Processing
+# Cola SQS para procesamiento asíncrono de trabajos
 # ========================================
 
 resource "aws_sqs_queue" "analysis_jobs" {
   name                       = "alex-analysis-jobs"
   delay_seconds             = 0
   max_message_size          = 262144
-  message_retention_seconds = 86400  # 1 day
+  message_retention_seconds = 86400  # 1 día
   receive_wait_time_seconds = 10     # Long polling
-  visibility_timeout_seconds = 910   # 15 minutes + 10 seconds buffer (matches Planner Lambda timeout)
+  visibility_timeout_seconds = 910   # 15 minutos + 10 segundos de buffer (coincide con el timeout de la Lambda Planner)
   
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.analysis_jobs_dlq.arn
@@ -52,7 +52,7 @@ resource "aws_sqs_queue" "analysis_jobs_dlq" {
 }
 
 # ========================================
-# IAM Role for Lambda Functions
+# Rol IAM para funciones Lambda
 # ========================================
 
 resource "aws_iam_role" "lambda_agents_role" {
@@ -77,7 +77,7 @@ resource "aws_iam_role" "lambda_agents_role" {
   }
 }
 
-# IAM policy for Lambda agents
+# Política IAM para los agentes Lambda
 resource "aws_iam_role_policy" "lambda_agents_policy" {
   name = "alex-lambda-agents-policy"
   role = aws_iam_role.lambda_agents_role.id
@@ -95,7 +95,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"
       },
-      # SQS access for orchestrator
+      # Acceso SQS para el orquestador
       {
         Effect = "Allow"
         Action = [
@@ -105,7 +105,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = aws_sqs_queue.analysis_jobs.arn
       },
-      # Lambda invocation for orchestrator to call other agents
+      # Invocación Lambda para que el orquestador llame a otros agentes
       {
         Effect = "Allow"
         Action = [
@@ -113,7 +113,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:alex-*"
       },
-      # Aurora Data API access
+      # Acceso a Aurora Data API
       {
         Effect = "Allow"
         Action = [
@@ -125,7 +125,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = var.aurora_cluster_arn
       },
-      # Secrets Manager for database credentials
+      # Secrets Manager para credenciales de base de datos
       {
         Effect = "Allow"
         Action = [
@@ -133,7 +133,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = var.aurora_secret_arn
       },
-      # S3 Vectors access for all agents
+      # Acceso a S3 Vectors para todos los agentes
       {
         Effect = "Allow"
         Action = [
@@ -145,7 +145,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
           "arn:aws:s3:::${var.vector_bucket}/*"
         ]
       },
-      # S3 Vectors API access for all agents
+      # Acceso a la API S3 Vectors para todos los agentes
       {
         Effect = "Allow"
         Action = [
@@ -154,7 +154,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/${var.vector_bucket}/index/*"
       },
-      # SageMaker endpoint access for reporter agent
+      # Acceso al endpoint SageMaker para el agente reporter
       {
         Effect = "Allow"
         Action = [
@@ -162,7 +162,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
         ]
         Resource = "arn:aws:sagemaker:${var.aws_region}:${data.aws_caller_identity.current.account_id}:endpoint/${var.sagemaker_endpoint}"
       },
-      # Bedrock access for all agents
+      # Acceso Bedrock para todos los agentes
       {
         Effect = "Allow"
         Action = [
@@ -178,17 +178,17 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
   })
 }
 
-# Attach basic Lambda execution role
+# Adjuntar rol básico de ejecución para Lambda
 resource "aws_iam_role_policy_attachment" "lambda_agents_basic" {
   role       = aws_iam_role.lambda_agents_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 # ========================================
-# S3 Bucket for Lambda Deployments
+# Bucket S3 para despliegues de Lambda
 # ========================================
 
-# S3 bucket for Lambda packages (packages > 50MB must use S3)
+# Bucket S3 para paquetes de Lambda (los paquetes > 50MB deben usar S3)
 resource "aws_s3_bucket" "lambda_packages" {
   bucket = "alex-lambda-packages-${data.aws_caller_identity.current.account_id}"
   
@@ -198,7 +198,7 @@ resource "aws_s3_bucket" "lambda_packages" {
   }
 }
 
-# Upload Lambda packages to S3
+# Subir paquetes Lambda a S3
 resource "aws_s3_object" "lambda_packages" {
   for_each = toset(["planner", "tagger", "reporter", "charter", "retirement"])
   
@@ -215,23 +215,23 @@ resource "aws_s3_object" "lambda_packages" {
 }
 
 # ========================================
-# Lambda Functions for Each Agent
+# Funciones Lambda para cada agente
 # ========================================
 
-# Planner (Orchestrator) Lambda
+# Lambda Planner (Orquestador)
 resource "aws_lambda_function" "planner" {
   function_name = "alex-planner"
   role          = aws_iam_role.lambda_agents_role.arn
   
-  # Using S3 for deployment package (>50MB)
+  # Usando S3 para el paquete de despliegue (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
   s3_key           = aws_s3_object.lambda_packages["planner"].key
   source_code_hash = fileexists("${path.module}/../../backend/planner/planner_lambda.zip") ? filebase64sha256("${path.module}/../../backend/planner/planner_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.13"
-  timeout     = 900  # 15 minutes for planner
-  memory_size = 2048  # 2GB for planner
+  timeout     = 900  # 15 minutos para planner
+  memory_size = 2048  # 2GB para planner
   
   environment {
     variables = {
@@ -245,7 +245,7 @@ resource "aws_lambda_function" "planner" {
       SAGEMAKER_ENDPOINT = var.sagemaker_endpoint
       POLYGON_API_KEY    = var.polygon_api_key
       POLYGON_PLAN       = var.polygon_plan
-      # LangFuse observability (optional)
+      # Observabilidad LangFuse (opcional)
       LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
       LANGFUSE_SECRET_KEY = var.langfuse_secret_key
       LANGFUSE_HOST       = var.langfuse_host
@@ -262,26 +262,26 @@ resource "aws_lambda_function" "planner" {
   depends_on = [aws_s3_object.lambda_packages["planner"]]
 }
 
-# SQS trigger for Planner
+# Trigger SQS para Planner
 resource "aws_lambda_event_source_mapping" "planner_sqs" {
   event_source_arn = aws_sqs_queue.analysis_jobs.arn
   function_name    = aws_lambda_function.planner.arn
   batch_size       = 1
 }
 
-# Tagger Lambda
+# Lambda Tagger
 resource "aws_lambda_function" "tagger" {
   function_name = "alex-tagger"
   role          = aws_iam_role.lambda_agents_role.arn
 
-  # Using S3 for deployment package (>50MB)
+  # Usando S3 para el paquete de despliegue (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
   s3_key           = aws_s3_object.lambda_packages["tagger"].key
   source_code_hash = fileexists("${path.module}/../../backend/tagger/tagger_lambda.zip") ? filebase64sha256("${path.module}/../../backend/tagger/tagger_lambda.zip") : null
 
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.13"
-  timeout     = 300  # 5 minutes for tagger
+  timeout     = 300  # 5 minutos para tagger
   memory_size = 1024
 
   environment {
@@ -292,7 +292,7 @@ resource "aws_lambda_function" "tagger" {
       BEDROCK_MODEL_ID   = var.bedrock_model_id
       BEDROCK_REGION     = var.bedrock_region
       DEFAULT_AWS_REGION = var.aws_region
-      # LangFuse observability (optional)
+      # Observabilidad LangFuse (opcional)
       LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
       LANGFUSE_SECRET_KEY = var.langfuse_secret_key
       LANGFUSE_HOST       = var.langfuse_host
@@ -309,19 +309,19 @@ resource "aws_lambda_function" "tagger" {
   depends_on = [aws_s3_object.lambda_packages["tagger"]]
 }
 
-# Reporter Lambda
+# Lambda Reporter
 resource "aws_lambda_function" "reporter" {
   function_name = "alex-reporter"
   role          = aws_iam_role.lambda_agents_role.arn
   
-  # Using S3 for deployment package (>50MB)
+  # Usando S3 para el paquete de despliegue (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
   s3_key           = aws_s3_object.lambda_packages["reporter"].key
   source_code_hash = fileexists("${path.module}/../../backend/reporter/reporter_lambda.zip") ? filebase64sha256("${path.module}/../../backend/reporter/reporter_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.13"
-  timeout     = 300  # 5 minutes for reporter agent
+  timeout     = 300  # 5 minutos para el agente reporter
   memory_size = 1024
   
   environment {
@@ -333,7 +333,7 @@ resource "aws_lambda_function" "reporter" {
       BEDROCK_REGION     = var.bedrock_region
       DEFAULT_AWS_REGION = var.aws_region
       SAGEMAKER_ENDPOINT = var.sagemaker_endpoint
-      # LangFuse observability (optional)
+      # Observabilidad LangFuse (opcional)
       LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
       LANGFUSE_SECRET_KEY = var.langfuse_secret_key
       LANGFUSE_HOST       = var.langfuse_host
@@ -350,19 +350,19 @@ resource "aws_lambda_function" "reporter" {
   depends_on = [aws_s3_object.lambda_packages["reporter"]]
 }
 
-# Charter Lambda
+# Lambda Charter
 resource "aws_lambda_function" "charter" {
   function_name = "alex-charter"
   role          = aws_iam_role.lambda_agents_role.arn
   
-  # Using S3 for deployment package (>50MB)
+  # Usando S3 para el paquete de despliegue (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
   s3_key           = aws_s3_object.lambda_packages["charter"].key
   source_code_hash = fileexists("${path.module}/../../backend/charter/charter_lambda.zip") ? filebase64sha256("${path.module}/../../backend/charter/charter_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.13"
-  timeout     = 300  # 5 minutes for charter agent
+  timeout     = 300  # 5 minutos para el agente charter
   memory_size = 1024
   
   environment {
@@ -373,7 +373,7 @@ resource "aws_lambda_function" "charter" {
       BEDROCK_MODEL_ID   = var.bedrock_model_id
       BEDROCK_REGION     = var.bedrock_region
       DEFAULT_AWS_REGION = var.aws_region
-      # LangFuse observability (optional)
+      # Observabilidad LangFuse (opcional)
       LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
       LANGFUSE_SECRET_KEY = var.langfuse_secret_key
       LANGFUSE_HOST       = var.langfuse_host
@@ -390,19 +390,19 @@ resource "aws_lambda_function" "charter" {
   depends_on = [aws_s3_object.lambda_packages["charter"]]
 }
 
-# Retirement Lambda
+# Lambda Retirement
 resource "aws_lambda_function" "retirement" {
   function_name = "alex-retirement"
   role          = aws_iam_role.lambda_agents_role.arn
   
-  # Using S3 for deployment package (>50MB)
+  # Usando S3 para el paquete de despliegue (>50MB)
   s3_bucket        = aws_s3_bucket.lambda_packages.id
   s3_key           = aws_s3_object.lambda_packages["retirement"].key
   source_code_hash = fileexists("${path.module}/../../backend/retirement/retirement_lambda.zip") ? filebase64sha256("${path.module}/../../backend/retirement/retirement_lambda.zip") : null
   
   handler     = "lambda_handler.lambda_handler"
   runtime     = "python3.13"
-  timeout     = 300  # 5 minutes for retirement agent
+  timeout     = 300  # 5 minutos para el agente retirement
   memory_size = 1024
   
   environment {
@@ -413,7 +413,7 @@ resource "aws_lambda_function" "retirement" {
       BEDROCK_MODEL_ID   = var.bedrock_model_id
       BEDROCK_REGION     = var.bedrock_region
       DEFAULT_AWS_REGION = var.aws_region
-      # LangFuse observability (optional)
+      # Observabilidad LangFuse (opcional)
       LANGFUSE_PUBLIC_KEY = var.langfuse_public_key
       LANGFUSE_SECRET_KEY = var.langfuse_secret_key
       LANGFUSE_HOST       = var.langfuse_host
@@ -430,7 +430,7 @@ resource "aws_lambda_function" "retirement" {
   depends_on = [aws_s3_object.lambda_packages["retirement"]]
 }
 
-# CloudWatch Log Groups
+# Grupos de logs de CloudWatch
 resource "aws_cloudwatch_log_group" "agent_logs" {
   for_each = toset(["planner", "tagger", "reporter", "charter", "retirement"])
   

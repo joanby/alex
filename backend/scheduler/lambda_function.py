@@ -1,6 +1,6 @@
 """
-Lambda function to trigger App Runner research endpoint.
-Called by EventBridge on a schedule.
+Función Lambda para disparar el endpoint de investigación de App Runner.
+Llamada por EventBridge en un horario programado.
 """
 import os
 import urllib.request
@@ -8,13 +8,13 @@ import json
 
 
 def handler(event, context):
-    """Trigger the research endpoint on App Runner."""
+    """Dispara el endpoint de investigación en App Runner."""
     
     app_runner_url = os.environ.get('APP_RUNNER_URL')
     if not app_runner_url:
-        raise ValueError("APP_RUNNER_URL environment variable not set")
+        raise ValueError("La variable de entorno APP_RUNNER_URL no está configurada")
     
-    # Remove any protocol if included
+    # Eliminar cualquier protocolo si está incluido
     if app_runner_url.startswith('https://'):
         app_runner_url = app_runner_url.replace('https://', '')
     elif app_runner_url.startswith('http://'):
@@ -23,7 +23,7 @@ def handler(event, context):
     url = f"https://{app_runner_url}/research"
     
     try:
-        # Create POST request with empty JSON body (agent will pick topic)
+        # Crear una petición POST con body JSON vacío (el agente elegirá el tema)
         data = json.dumps({}).encode('utf-8')
         req = urllib.request.Request(
             url, 
@@ -34,16 +34,16 @@ def handler(event, context):
         
         with urllib.request.urlopen(req, timeout=180) as response:
             result = response.read().decode('utf-8')
-            print(f"Research triggered successfully: {result}")
+            print(f"Investigación disparada correctamente: {result}")
             return {
                 'statusCode': 200,
                 'body': json.dumps({
-                    'message': 'Research triggered successfully',
+                    'message': 'Investigación disparada correctamente',
                     'result': result
                 })
             }
     except Exception as e:
-        print(f"Error triggering research: {str(e)}")
+        print(f"Error al disparar la investigación: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps({

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test scale with multiple concurrent users (Phase 6.6)"""
+"""Prueba de escalabilidad con múltiples usuarios simultáneos (Fase 6.6)"""
 
 import asyncio
 import os
@@ -11,34 +11,34 @@ from datetime import datetime
 from dotenv import load_dotenv
 import concurrent.futures
 
-# Load environment variables
+# Cargar variables de entorno
 load_dotenv(override=True)
 
 from src import Database
 
 async def create_test_user(user_num: int, num_accounts: int, num_positions: int):
-    """Create a test user with specified number of accounts and positions"""
+    """Crea un usuario de prueba con un número especificado de cuentas y posiciones"""
     db = Database()
     
-    # Test user ID
+    # ID de usuario de prueba
     test_user = f"scale_test_{user_num}_{uuid.uuid4().hex[:6]}"
     
-    # Create user
+    # Crear usuario
     db.users.create_user(
         clerk_user_id=test_user,
-        display_name=f"Scale Test User {user_num}",
+        display_name=f"Usuario de Prueba de Escala {user_num}",
         years_until_retirement=20 + user_num * 5,
         target_retirement_income=50000 + user_num * 10000
     )
     
-    # Ensure instruments exist
+    # Asegurarse de que existen los instrumentos
     instruments = ["SPY", "BND", "VTI", "VXUS", "QQQ", "IWM", "EFA", "AGG", "VNQ", "GLD"]
     for i, symbol in enumerate(instruments):
         existing = db.instruments.find_by_symbol(symbol)
         if not existing:
             db.instruments.create({
                 "symbol": symbol,
-                "name": f"Test ETF {symbol}",
+                "name": f"ETF de Prueba {symbol}",
                 "instrument_type": "etf",
                 "current_price": 100.0 + i * 50,
                 "allocation_asset_class": {"equity": 100.0} if i % 2 == 0 else {"fixed_income": 100.0},
@@ -49,18 +49,18 @@ async def create_test_user(user_num: int, num_accounts: int, num_positions: int)
     account_ids = []
     total_positions = 0
     
-    # Create accounts (ensure at least 1 account even if num_accounts is 0)
+    # Crear cuentas (asegurar al menos 1 cuenta incluso si num_accounts es 0)
     accounts_to_create = max(num_accounts, 1)
     for acct_num in range(1, accounts_to_create + 1):
         account_id = db.accounts.create_account(
             clerk_user_id=test_user,
-            account_name=f"Account {acct_num}",
-            account_purpose="test",
+            account_name=f"Cuenta {acct_num}",
+            account_purpose="prueba",
             cash_balance=1000.0 * acct_num
         )
         account_ids.append(account_id)
         
-        # Add positions (distribute across accounts)
+        # Agregar posiciones (distribuir entre las cuentas)
         if num_positions > 0 and accounts_to_create > 0:
             positions_for_account = num_positions // accounts_to_create + (1 if acct_num <= (num_positions % accounts_to_create) else 0)
             for i in range(positions_for_account):
@@ -71,7 +71,7 @@ async def create_test_user(user_num: int, num_accounts: int, num_positions: int)
                 db.positions.add_position(account_id, symbol, qty)
                 total_positions += 1
     
-    # Create job
+    # Crear job
     job_data = {
         'clerk_user_id': test_user,
         'job_type': 'portfolio_analysis',
@@ -90,15 +90,15 @@ async def create_test_user(user_num: int, num_accounts: int, num_positions: int)
     }
 
 async def send_job_to_sqs(job_id: str):
-    """Send a job to SQS"""
+    """Enviar un job a SQS"""
     sqs = boto3.client('sqs', region_name=os.getenv('DEFAULT_AWS_REGION', 'us-east-1'))
     
-    # Get queue URL
+    # Obtener URL de la cola
     queue_name = 'alex-analysis-jobs'
     response = sqs.get_queue_url(QueueName=queue_name)
     queue_url = response['QueueUrl']
     
-    # Send message
+    # Enviar mensaje
     message = {
         'job_id': job_id,
         'timestamp': datetime.now().isoformat()
@@ -112,7 +112,7 @@ async def send_job_to_sqs(job_id: str):
     return response['MessageId']
 
 async def monitor_job(job_id: str, timeout: int = 300):
-    """Monitor a single job until completion"""
+    """Monitoriza un job hasta su finalización"""
     db = Database()
     start_time = time.time()
     
@@ -130,46 +130,46 @@ async def monitor_job(job_id: str, timeout: int = 300):
     return {"job_id": job_id, "status": "timeout"}
 
 async def run_scale_test():
-    """Run the scale test with multiple users"""
+    """Ejecuta la prueba de escalabilidad con múltiples usuarios"""
     print("=" * 60)
-    print("PHASE 6.6: SCALE TEST")
+    print("FASE 6.6: PRUEBA DE ESCALABILIDAD")
     print("=" * 60)
     
-    # Test configuration - 3 users with multiple accounts as required
+    # Configuración de prueba - 3 usuarios con múltiples cuentas según se requiera
     test_configs = [
-        {"user_num": 1, "num_accounts": 1, "num_positions": 0},  # Empty portfolio (single account)
-        {"user_num": 2, "num_accounts": 1, "num_positions": 3},  # Small portfolio (single account)
-        {"user_num": 3, "num_accounts": 2, "num_positions": 5},  # Medium portfolio (multiple accounts)
-        {"user_num": 4, "num_accounts": 3, "num_positions": 10}, # Large portfolio (multiple accounts)
-        {"user_num": 5, "num_accounts": 2, "num_positions": 7},  # Mixed portfolio (multiple accounts)
+        {"user_num": 1, "num_accounts": 1, "num_positions": 0},  # Portafolio vacío (una cuenta)
+        {"user_num": 2, "num_accounts": 1, "num_positions": 3},  # Portafolio pequeño (una cuenta)
+        {"user_num": 3, "num_accounts": 2, "num_positions": 5},  # Portafolio mediano (varias cuentas)
+        {"user_num": 4, "num_accounts": 3, "num_positions": 10}, # Portafolio grande (varias cuentas)
+        {"user_num": 5, "num_accounts": 2, "num_positions": 7},  # Portafolio mixto (varias cuentas)
     ]
     
     all_users = []
     
-    # Create all test users
-    print("\n📊 Creating test users...")
+    # Crear todos los usuarios de prueba
+    print("\n📊 Creando usuarios de prueba...")
     for config in test_configs:
         user_data = await create_test_user(**config)
         all_users.append(user_data)
-        print(f"  User {config['user_num']}: {user_data['num_accounts']} accounts, {user_data['num_positions']} positions")
+        print(f"  Usuario {config['user_num']}: {user_data['num_accounts']} cuentas, {user_data['num_positions']} posiciones")
     
-    # Send all jobs to SQS concurrently
-    print("\n🚀 Sending jobs to SQS...")
+    # Enviar todos los jobs a SQS concurrentemente
+    print("\n🚀 Enviando jobs a SQS...")
     send_tasks = []
     for user in all_users:
         msg_id = await send_job_to_sqs(user['job_id'])
-        print(f"  User {user['user_num']}: Job {user['job_id'][:8]}... sent")
+        print(f"  Usuario {user['user_num']}: Job {user['job_id'][:8]}... enviado")
     
-    # Monitor all jobs concurrently
-    print("\n⏳ Monitoring jobs (max 5 minutes)...")
+    # Monitorizar todos los jobs concurrentemente
+    print("\n⏳ Monitorizando jobs (máx 5 minutos)...")
     print("-" * 50)
     
     monitor_tasks = [monitor_job(user['job_id']) for user in all_users]
     results = await asyncio.gather(*monitor_tasks)
     
-    # Display results
+    # Mostrar resultados
     print("-" * 50)
-    print("\n📋 RESULTS:")
+    print("\n📋 RESULTADOS:")
     print("-" * 50)
     
     successful = 0
@@ -184,27 +184,27 @@ async def run_scale_test():
         if status == 'completed':
             successful += 1
             total_time += result['elapsed']
-            print(f"✅ User {user['user_num']}: Completed in {result['elapsed']}s")
+            print(f"✅ Usuario {user['user_num']}: Completado en {result['elapsed']}s")
         elif status == 'failed':
             failed += 1
-            print(f"❌ User {user['user_num']}: Failed - {result.get('error', 'Unknown')}")
+            print(f"❌ Usuario {user['user_num']}: Falló - {result.get('error', 'Desconocido')}")
         else:
             timed_out += 1
-            print(f"⏱️ User {user['user_num']}: Timed out")
+            print(f"⏱️ Usuario {user['user_num']}: Tiempo agotado")
     
-    # Summary
+    # Resumen
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("RESUMEN")
     print("=" * 60)
-    print(f"Total users: {len(all_users)}")
-    print(f"Successful: {successful}")
-    print(f"Failed: {failed}")
-    print(f"Timed out: {timed_out}")
+    print(f"Usuarios totales: {len(all_users)}")
+    print(f"Exitosos: {successful}")
+    print(f"Fallidos: {failed}")
+    print(f"Tiempo agotado: {timed_out}")
     if successful > 0:
-        print(f"Average completion time: {total_time/successful:.1f}s")
+        print(f"Tiempo promedio de finalización: {total_time/successful:.1f}s")
     
-    # Verify job details
-    print("\n📊 Detailed Results:")
+    # Verificar detalles de jobs
+    print("\n📊 Resultados Detallados:")
     db = Database()
     for user in all_users:
         job = db.jobs.find_by_id(user['job_id'])
@@ -221,53 +221,53 @@ async def run_scale_test():
             num_charts = len(charts_payload) if charts_payload else 0
             has_retirement = job.get('retirement_payload') is not None
             
-            print(f"  User {user['user_num']}: Report {report_size:,} chars, {num_charts} charts, Retirement: {has_retirement}")
+            print(f"  Usuario {user['user_num']}: Reporte {report_size:,} caracteres, {num_charts} gráficos, Retiro: {has_retirement}")
     
-    # Cleanup
-    print("\n🧹 Cleaning up test data...")
+    # Limpieza
+    print("\n🧹 Limpiando datos de prueba...")
     for user in all_users:
-        # Delete positions
+        # Eliminar posiciones
         for account_id in user['account_ids']:
             db.execute_raw(
                 "DELETE FROM positions WHERE account_id = :account_id::uuid",
                 [{"name": "account_id", "value": {"stringValue": account_id}}]
             )
         
-        # Delete accounts
+        # Eliminar cuentas
         db.execute_raw(
             "DELETE FROM accounts WHERE clerk_user_id = :user_id",
             [{"name": "user_id", "value": {"stringValue": user['user_id']}}]
         )
         
-        # Delete jobs
+        # Eliminar jobs
         db.execute_raw(
             "DELETE FROM jobs WHERE clerk_user_id = :user_id",
             [{"name": "user_id", "value": {"stringValue": user['user_id']}}]
         )
         
-        # Delete user
+        # Eliminar usuario
         db.execute_raw(
             "DELETE FROM users WHERE clerk_user_id = :user_id",
             [{"name": "user_id", "value": {"stringValue": user['user_id']}}]
         )
     
-    print("Cleanup completed")
+    print("Limpieza completada")
     
-    # Final result
+    # Resultado final
     if successful == len(all_users):
-        print("\n✅ PHASE 6.6 TEST PASSED: All users processed successfully")
+        print("\n✅ FASE 6.6 PRUEBA APROBADA: Todos los usuarios procesados exitosamente")
         return True
     else:
-        print(f"\n❌ PHASE 6.6 TEST FAILED: {failed + timed_out} users did not complete")
+        print(f"\n❌ FASE 6.6 PRUEBA FALLIDA: {failed + timed_out} usuarios no se completaron")
         return False
 
 async def main():
-    """Main entry point"""
+    """Punto de entrada principal"""
     try:
         success = await run_scale_test()
         exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ ERROR during test: {e}")
+        print(f"\n❌ ERROR durante la prueba: {e}")
         import traceback
         traceback.print_exc()
         exit(1)

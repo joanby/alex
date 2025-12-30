@@ -1,13 +1,13 @@
 """
-Observability module for LangFuse integration.
-Provides a simple context manager for setting up and flushing traces.
+Módulo de observabilidad para la integración con LangFuse.
+Proporciona un gestor de contexto sencillo para configurar y vaciar trazas.
 """
 
 import os
 import logging
 from contextlib import contextmanager
 
-# Use root logger for Lambda compatibility
+# Usar el logger raíz por compatibilidad con Lambda
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -15,98 +15,98 @@ logger.setLevel(logging.INFO)
 @contextmanager
 def observe():
     """
-    Context manager for observability with LangFuse.
+    Gestor de contexto para la observabilidad con LangFuse.
 
-    Sets up LangFuse observability if environment variables are configured,
-    and ensures traces are flushed on exit.
+    Configura la observabilidad de LangFuse si las variables de entorno están configuradas,
+    y asegura que las trazas se vacíen al salir.
 
-    Usage:
+    Uso:
         from observability import observe
 
         with observe():
-            # Your code that uses OpenAI Agents SDK
+            # Tu código que usa OpenAI Agents SDK
             result = await agent.run(...)
     """
-    logger.info("🔍 Observability: Checking configuration...")
+    logger.info("🔍 Observabilidad: Comprobando configuración...")
 
-    # Check if required environment variables exist
+    # Verifica si existen las variables de entorno requeridas
     has_langfuse = bool(os.getenv("LANGFUSE_SECRET_KEY"))
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
 
-    logger.info(f"🔍 Observability: LANGFUSE_SECRET_KEY exists: {has_langfuse}")
-    logger.info(f"🔍 Observability: OPENAI_API_KEY exists: {has_openai}")
+    logger.info(f"🔍 Observabilidad: Existe LANGFUSE_SECRET_KEY: {has_langfuse}")
+    logger.info(f"🔍 Observabilidad: Existe OPENAI_API_KEY: {has_openai}")
 
     if not has_langfuse:
-        logger.info("🔍 Observability: LangFuse not configured, skipping setup")
+        logger.info("🔍 Observabilidad: LangFuse no está configurado, omitiendo la configuración")
         yield
         return
 
     if not has_openai:
-        logger.warning("⚠️  Observability: OPENAI_API_KEY not set, traces may not export")
+        logger.warning("⚠️  Observabilidad: OPENAI_API_KEY no está configurada, las trazas pueden no exportarse")
 
-    # Local variable for the client (no global needed)
+    # Variable local para el cliente (no es necesario global)
     langfuse_client = None
 
-    # Try to set up LangFuse
+    # Intentar configurar LangFuse
     try:
-        logger.info("🔍 Observability: Setting up LangFuse...")
+        logger.info("🔍 Observabilidad: Configurando LangFuse...")
 
         import logfire
         from langfuse import get_client
 
-        # Configure logfire to instrument OpenAI Agents SDK
+        # Configurar logfire para instrumentar OpenAI Agents SDK
         logfire.configure(
             service_name="alex_retirement_agent",
-            send_to_logfire=False,  # Don't send to Logfire cloud
+            send_to_logfire=False,  # No enviar a Logfire cloud
         )
-        logger.info("✅ Observability: Logfire configured")
+        logger.info("✅ Observabilidad: Logfire configurado")
 
-        # Instrument OpenAI Agents SDK
+        # Instrumentar OpenAI Agents SDK
         logfire.instrument_openai_agents()
-        logger.info("✅ Observability: OpenAI Agents SDK instrumented")
+        logger.info("✅ Observabilidad: OpenAI Agents SDK instrumentado")
 
-        # Initialize LangFuse client
+        # Inicializar cliente de LangFuse
         langfuse_client = get_client()
-        logger.info("✅ Observability: LangFuse client initialized")
+        logger.info("✅ Observabilidad: Cliente de LangFuse inicializado")
 
-        # Optional: Check authentication (blocking call, use sparingly)
+        # Opcional: Comprobar autenticación (llamada bloqueante, usar con moderación)
         try:
             auth_result = langfuse_client.auth_check()
             logger.info(
-                f"✅ Observability: LangFuse authentication check passed (result: {auth_result})"
+                f"✅ Observabilidad: Comprobación de autenticación de LangFuse pasada (resultado: {auth_result})"
             )
         except Exception as auth_error:
-            logger.warning(f"⚠️  Observability: Auth check failed but continuing: {auth_error}")
+            logger.warning(f"⚠️  Observabilidad: Falló la comprobación de autenticación pero se continúa: {auth_error}")
 
-        logger.info("🎯 Observability: Setup complete - traces will be sent to LangFuse")
+        logger.info("🎯 Observabilidad: Configuración completa - las trazas se enviarán a LangFuse")
 
     except ImportError as e:
-        logger.error(f"❌ Observability: Missing required package: {e}")
+        logger.error(f"❌ Observabilidad: Falta un paquete requerido: {e}")
         langfuse_client = None
     except Exception as e:
-        logger.error(f"❌ Observability: Setup failed: {e}")
+        logger.error(f"❌ Observabilidad: Falló la configuración: {e}")
         langfuse_client = None
 
     try:
-        # Yield control back to the calling code
+        # Ceder el control de vuelta al código que llama
         yield
     finally:
-        # Flush traces on exit
+        # Vaciar trazas al salir
         if langfuse_client:
             try:
-                logger.info("🔍 Observability: Flushing traces to LangFuse...")
+                logger.info("🔍 Observabilidad: Vaciando trazas a LangFuse...")
                 langfuse_client.flush()
                 langfuse_client.shutdown()
 
-                # Add a 10 second delay to ensure network requests complete
-                # This is a workaround for Lambda's immediate termination
+                # Añade un retraso de 10 segundos para asegurar que las peticiones de red se completen
+                # Esto es un workaround para la terminación inmediata de Lambda
                 import time
 
-                logger.info("🔍 Observability: Waiting 10 seconds for flush to complete...")
+                logger.info("🔍 Observabilidad: Esperando 10 segundos para completar el vaciado...")
                 time.sleep(10)
 
-                logger.info("✅ Observability: Traces flushed successfully")
+                logger.info("✅ Observabilidad: Trazas vaciadas correctamente")
             except Exception as e:
-                logger.error(f"❌ Observability: Failed to flush traces: {e}")
+                logger.error(f"❌ Observabilidad: Error al vaciar las trazas: {e}")
         else:
-            logger.debug("🔍 Observability: No client to flush")
+            logger.debug("🔍 Observabilidad: No hay cliente para vaciar")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test for Reporter agent
+Prueba simple para el agente Reporter
 """
 
 import asyncio
@@ -14,9 +14,9 @@ from src.schemas import JobCreate
 from lambda_handler import lambda_handler
 
 def test_reporter():
-    """Test the reporter agent with simple portfolio data"""
+    """Prueba el agente reporter con datos de portafolio simples"""
     
-    # Create a real job in the database
+    # Crear un trabajo real en la base de datos
     db = Database()
     job_create = JobCreate(
         clerk_user_id="test_user_001",
@@ -24,7 +24,7 @@ def test_reporter():
         request_payload={"test": True}
     )
     job_id = db.jobs.create(job_create.model_dump())
-    print(f"Created test job: {job_id}")
+    print(f"Trabajo de prueba creado: {job_id}")
     
     test_event = {
         "job_id": job_id,
@@ -53,37 +53,37 @@ def test_reporter():
         }
     }
     
-    print("Testing Reporter Agent...")
+    print("Probando el agente Reporter...")
     print("=" * 60)
     
     result = lambda_handler(test_event, None)
     
-    print(f"Status Code: {result['statusCode']}")
+    print(f"Código de estado: {result['statusCode']}")
     
     if result['statusCode'] == 200:
         body = json.loads(result['body'])
-        print(f"Success: {body.get('success', False)}")
-        print(f"Message: {body.get('message', 'N/A')}")
+        print(f"Éxito: {body.get('success', False)}")
+        print(f"Mensaje: {body.get('message', 'N/A')}")
         
-        # Check what was actually saved in the database
+        # Verificar lo que realmente se guardó en la base de datos
         print("\n" + "=" * 60)
-        print("CHECKING DATABASE CONTENT")
+        print("REVISANDO CONTENIDO DE LA BASE DE DATOS")
         print("=" * 60)
         
         job = db.jobs.find_by_id(job_id)
         if job and job.get('report_payload'):
             payload = job['report_payload']
-            print(f"✅ Report data found in database")
-            print(f"Payload keys: {list(payload.keys())}")
+            print(f"✅ Datos del informe encontrados en la base de datos")
+            print(f"Claves de payload: {list(payload.keys())}")
             
             if 'content' in payload:
                 content = payload['content']
-                print(f"\nContent type: {type(content).__name__}")
+                print(f"\nTipo de contenido: {type(content).__name__}")
                 
                 if isinstance(content, str):
-                    print(f"Report length: {len(content)} characters")
+                    print(f"Longitud del informe: {len(content)} caracteres")
                     
-                    # Check if it contains reasoning artifacts
+                    # Verificar si contiene artefactos de razonamiento
                     reasoning_indicators = [
                         "I need to",
                         "I will",
@@ -98,35 +98,35 @@ def test_reporter():
                     contains_reasoning = any(indicator.lower() in content.lower() for indicator in reasoning_indicators)
                     
                     if contains_reasoning:
-                        print("⚠️  WARNING: Report may contain reasoning/thinking text")
+                        print("⚠️  ADVERTENCIA: El informe puede contener texto de razonamiento/pensamiento")
                     else:
-                        print("✅ Report appears to be final output only (no reasoning detected)")
+                        print("✅ El informe parece ser solo la salida final (no se detectó razonamiento)")
                     
-                    # Show first 500 characters and last 200 characters
-                    print(f"\nFirst 500 characters:")
+                    # Mostrar los primeros 500 caracteres y los últimos 200 caracteres
+                    print(f"\nPrimeros 500 caracteres:")
                     print("-" * 40)
                     print(content[:500])
                     print("-" * 40)
                     
                     if len(content) > 700:
-                        print(f"\nLast 200 characters:")
+                        print(f"\nÚltimos 200 caracteres:")
                         print("-" * 40)
                         print(content[-200:])
                         print("-" * 40)
                 else:
-                    print(f"⚠️  Content is not a string: {type(content)}")
-                    print(f"Content: {str(content)[:200]}")
+                    print(f"⚠️  El contenido no es una cadena: {type(content)}")
+                    print(f"Contenido: {str(content)[:200]}")
             
-            print(f"\nGenerated at: {payload.get('generated_at', 'N/A')}")
-            print(f"Agent: {payload.get('agent', 'N/A')}")
+            print(f"\nGenerado en: {payload.get('generated_at', 'N/A')}")
+            print(f"Agente: {payload.get('agent', 'N/A')}")
         else:
-            print("❌ No report data found in database")
+            print("❌ No se encontraron datos del informe en la base de datos")
     else:
         print(f"Error: {result['body']}")
     
-    # Clean up - delete the test job
+    # Limpieza - eliminar el trabajo de prueba
     db.jobs.delete(job_id)
-    print(f"\nDeleted test job: {job_id}")
+    print(f"\nTrabajo de prueba eliminado: {job_id}")
     
     print("=" * 60)
 

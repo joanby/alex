@@ -1,5 +1,5 @@
 """
-Report Writer Agent - generates portfolio analysis narratives.
+Agente Redactor de Informes - genera narrativas de análisis de portafolios.
 """
 
 import os
@@ -16,16 +16,16 @@ logger = logging.getLogger()
 
 @dataclass
 class ReporterContext:
-    """Context for the Reporter agent"""
+    """Contexto para el agente Reporter"""
 
     job_id: str
     portfolio_data: Dict[str, Any]
     user_data: Dict[str, Any]
-    db: Optional[Any] = None  # Database connection (optional for testing)
+    db: Optional[Any] = None  # Conexión a base de datos (opcional para pruebas)
 
 
 def calculate_portfolio_metrics(portfolio_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate basic portfolio metrics."""
+    """Calcular métricas básicas del portafolio."""
     metrics = {
         "total_value": 0,
         "cash_balance": 0,
@@ -44,7 +44,7 @@ def calculate_portfolio_metrics(portfolio_data: Dict[str, Any]) -> Dict[str, Any
             if symbol:
                 metrics["unique_symbols"].add(symbol)
 
-            # Calculate value if we have price
+            # Calcular valor si tenemos precio
             instrument = position.get("instrument", {})
             if instrument.get("current_price"):
                 value = float(position.get("quantity", 0)) * float(instrument["current_price"])
@@ -57,24 +57,24 @@ def calculate_portfolio_metrics(portfolio_data: Dict[str, Any]) -> Dict[str, Any
 
 
 def format_portfolio_for_analysis(portfolio_data: Dict[str, Any], user_data: Dict[str, Any]) -> str:
-    """Format portfolio data for agent analysis."""
+    """Formatea los datos del portafolio para el análisis del agente."""
     metrics = calculate_portfolio_metrics(portfolio_data)
 
     lines = [
-        f"Portfolio Overview:",
-        f"- {metrics['num_accounts']} accounts",
-        f"- {metrics['num_positions']} total positions",
-        f"- {metrics['unique_symbols']} unique holdings",
-        f"- ${metrics['cash_balance']:,.2f} in cash",
-        f"- ${metrics['total_value']:,.2f} total value" if metrics["total_value"] > 0 else "",
+        f"Resumen del Portafolio:",
+        f"- {metrics['num_accounts']} cuentas",
+        f"- {metrics['num_positions']} posiciones totales",
+        f"- {metrics['unique_symbols']} instrumentos únicos",
+        f"- ${metrics['cash_balance']:,.2f} en efectivo",
+        f"- ${metrics['total_value']:,.2f} valor total" if metrics["total_value"] > 0 else "",
         "",
-        "Account Details:",
+        "Detalles de las cuentas:",
     ]
 
     for account in portfolio_data.get("accounts", []):
-        name = account.get("name", "Unknown")
+        name = account.get("name", "Desconocido")
         cash = float(account.get("cash_balance", 0))
-        lines.append(f"\n{name} (${cash:,.2f} cash):")
+        lines.append(f"\n{name} (${cash:,.2f} efectivo):")
 
         for position in account.get("positions", []):
             symbol = position.get("symbol")
@@ -82,33 +82,33 @@ def format_portfolio_for_analysis(portfolio_data: Dict[str, Any], user_data: Dic
             instrument = position.get("instrument", {})
             name = instrument.get("name", "")
 
-            # Include allocation info if available
+            # Incluir información de asignación si está disponible
             allocations = []
             if instrument.get("asset_class"):
-                allocations.append(f"Asset: {instrument['asset_class']}")
+                allocations.append(f"Clase de activo: {instrument['asset_class']}")
             if instrument.get("regions"):
                 regions = ", ".join(
                     [f"{r['name']} {r['percentage']}%" for r in instrument["regions"][:2]]
                 )
-                allocations.append(f"Regions: {regions}")
+                allocations.append(f"Regiones: {regions}")
 
             alloc_str = f" ({', '.join(allocations)})" if allocations else ""
-            lines.append(f"  - {symbol}: {quantity:,.2f} shares{alloc_str}")
+            lines.append(f"  - {symbol}: {quantity:,.2f} acciones{alloc_str}")
 
-    # Add user context
+    # Añadir el contexto del usuario
     lines.extend(
         [
             "",
-            "User Profile:",
-            f"- Years to retirement: {user_data.get('years_until_retirement', 'Not specified')}",
-            f"- Target retirement income: ${user_data.get('target_retirement_income', 0):,.0f}/year",
+            "Perfil de Usuario:",
+            f"- Años hasta la jubilación: {user_data.get('years_until_retirement', 'No especificado')}",
+            f"- Objetivo de ingresos para la jubilación: ${user_data.get('target_retirement_income', 0):,.0f}/año",
         ]
     )
 
     return "\n".join(lines)
 
 
-# update_report tool removed - report is now saved directly in lambda_handler
+# herramienta update_report eliminada - el informe ahora se guarda directamente en lambda_handler
 
 
 @function_tool
@@ -116,24 +116,24 @@ async def get_market_insights(
     wrapper: RunContextWrapper[ReporterContext], symbols: List[str]
 ) -> str:
     """
-    Retrieve market insights from S3 Vectors knowledge base.
+    Obtener insights de mercado desde la base de conocimiento S3 Vectors.
 
     Args:
-        wrapper: Context wrapper with job_id and database
-        symbols: List of symbols to get insights for
+        wrapper: Wrapper de contexto con job_id y base de datos
+        symbols: Lista de símbolos para obtener insights
 
     Returns:
-        Relevant market context and insights
+        Contexto e insights de mercado relevantes
     """
     try:
         import boto3
 
-        # Get account ID
+        # Obtener ID de la cuenta
         sts = boto3.client("sts")
         account_id = sts.get_caller_identity()["Account"]
         bucket = f"alex-vectors-{account_id}"
 
-        # Get embeddings
+        # Obtener embeddings
         sagemaker_region = os.getenv("DEFAULT_AWS_REGION", "us-east-1")
         sagemaker = boto3.client("sagemaker-runtime", region_name=sagemaker_region)
         endpoint_name = os.getenv("SAGEMAKER_ENDPOINT", "alex-embedding-endpoint")
@@ -146,13 +146,13 @@ async def get_market_insights(
         )
 
         result = json.loads(response["Body"].read().decode())
-        # Extract embedding (handle nested arrays)
+        # Extraer embedding (manejar arreglos anidados)
         if isinstance(result, list) and result:
             embedding = result[0][0] if isinstance(result[0], list) else result[0]
         else:
             embedding = result
 
-        # Search vectors
+        # Buscar vectores
         s3v = boto3.client("s3vectors", region_name=sagemaker_region)
         response = s3v.query_vectors(
             vectorBucketName=bucket,
@@ -162,7 +162,7 @@ async def get_market_insights(
             returnMetadata=True,
         )
 
-        # Format insights
+        # Formatear los insights
         insights = []
         for vector in response.get("vectors", []):
             metadata = vector.get("metadata", {})
@@ -173,59 +173,59 @@ async def get_market_insights(
                 insights.append(f"{prefix}{text}...")
 
         if insights:
-            return "Market Insights:\n" + "\n".join(insights)
+            return "Insights de Mercado:\n" + "\n".join(insights)
         else:
-            return "Market insights unavailable - proceeding with standard analysis."
+            return "Insights de mercado no disponibles - continuando con el análisis estándar."
 
     except Exception as e:
-        logger.warning(f"Reporter: Could not retrieve market insights: {e}")
-        return "Market insights unavailable - proceeding with standard analysis."
+        logger.warning(f"Reporter: No se pudieron obtener insights de mercado: {e}")
+        return "Insights de mercado no disponibles - continuando con el análisis estándar."
 
 
 def create_agent(job_id: str, portfolio_data: Dict[str, Any], user_data: Dict[str, Any], db=None):
-    """Create the reporter agent with tools and context."""
+    """Crear el agente reporter con herramientas y contexto."""
 
-    # Get model configuration
+    # Obtener configuración del modelo
     model_id = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
-    # Set region for LiteLLM Bedrock calls
+    # Establecer región para llamadas Bedrock de LiteLLM
     bedrock_region = os.getenv("BEDROCK_REGION", "us-west-2")
     logger.info(f"DEBUG: BEDROCK_REGION from env = {bedrock_region}")
     os.environ["AWS_REGION_NAME"] = bedrock_region
-    logger.info(f"DEBUG: Set AWS_REGION_NAME to {bedrock_region}")
+    logger.info(f"DEBUG: Se estableció AWS_REGION_NAME en {bedrock_region}")
 
     model = LitellmModel(model=f"bedrock/{model_id}")
 
-    # Create context
+    # Crear contexto
     context = ReporterContext(
         job_id=job_id, portfolio_data=portfolio_data, user_data=user_data, db=db
     )
 
-    # Tools - only get_market_insights now, report saved in lambda_handler
+    # Herramientas - solo get_market_insights ahora, el informe se guarda en lambda_handler
     tools = [get_market_insights]
 
-    # Format portfolio for analysis
+    # Formatear portafolio para el análisis
     portfolio_summary = format_portfolio_for_analysis(portfolio_data, user_data)
 
-    # Create task
-    task = f"""Analyze this investment portfolio and write a comprehensive report.
+    # Crear tarea
+    task = f"""Analiza este portafolio de inversión y redacta un informe completo.
 
 {portfolio_summary}
 
-Your task:
-1. First, get market insights for the top holdings using get_market_insights()
-2. Analyze the portfolio's current state, strengths, and weaknesses
-3. Generate a detailed, professional analysis report in markdown format
+Tu tarea:
+1. Primero, obtén insights de mercado para las principales posiciones usando get_market_insights()
+2. Analiza el estado actual del portafolio, fortalezas y debilidades
+3. Genera un informe de análisis detallado y profesional en formato markdown
 
-The report should include:
-- Executive Summary
-- Portfolio Composition Analysis
-- Risk Assessment
-- Diversification Analysis
-- Retirement Readiness (based on user goals)
-- Recommendations
-- Market Context (from insights)
+El informe debe incluir:
+- Resumen Ejecutivo
+- Análisis de la Composición del Portafolio
+- Evaluación de Riesgos
+- Análisis de Diversificación
+- Preparación para la Jubilación (basado en los objetivos del usuario)
+- Recomendaciones
+- Contexto de Mercado (a partir de los insights)
 
-Provide your complete analysis as the final output in clear markdown format.
-Make the report informative yet accessible to a retail investor."""
+Proporciona tu análisis completo como resultado final en un formato markdown claro.
+Haz que el informe sea informativo pero accesible para un inversor minorista."""
 
     return model, tools, task, context
