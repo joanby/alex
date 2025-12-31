@@ -166,11 +166,11 @@ async def test_bedrock():
         actual_region = session.region_name
 
         # Intentar crear el cliente de Bedrock explícitamente en us-west-2
-        client = boto3.client("bedrock-runtime", region_name="us-west-2")
+        client = boto3.client("bedrock-runtime", region_name="us-east-1")
 
         # Depuración: Listar modelos para verificar conexión
         try:
-            bedrock_client = boto3.client("bedrock", region_name="us-west-2")
+            bedrock_client = boto3.client("bedrock", region_name="us-east-1")
             models = bedrock_client.list_foundation_models()
             openai_models = [
                 m["modelId"] for m in models["modelSummaries"] if "openai" in m["modelId"].lower()

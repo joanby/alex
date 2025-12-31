@@ -1,153 +1,153 @@
-# Guide 8: Enterprise Grade - Scalability, Security, Monitoring, Guardrails & Observability
+# Guía 8: Nivel Empresarial - Escalabilidad, Seguridad, Monitoreo, Guardrails y Observabilidad
 
-Welcome to the final guide in the Alex Financial Advisor deployment series! In this guide, we'll transform our application into a production-ready, enterprise-grade system by implementing best practices for scalability, security, monitoring, guardrails, explainability, and observability.
+¡Bienvenido a la guía final de la serie de despliegue de Alex Financial Advisor! En esta guía, transformaremos nuestra aplicación en un sistema listo para producción y apto para empresas implementando buenas prácticas para la escalabilidad, seguridad, monitoreo, guardrails, explicabilidad y observabilidad.
 
-By the end of this guide, your Alex Financial Advisor will be:
+Al finalizar esta guía, tu Alex Financial Advisor será:
 
-- **Scalable**: Ready to handle enterprise-level traffic
-- **Secure**: Protected with multiple layers of security
-- **Monitored**: Full visibility into system health and performance
-- **Guarded**: Protected against AI hallucinations and errors
-- **Explainable**: Transparent AI decision-making
-- **Observable**: Complete tracing of all agent interactions
+- **Escalable**: Listo para manejar tráfico de nivel empresarial
+- **Seguro**: Protegido con múltiples capas de seguridad
+- **Monitorizado**: Visibilidad total en la salud y rendimiento del sistema
+- **Protegido**: Resguardado contra alucinaciones de IA y errores
+- **Explicable**: La toma de decisiones de la IA es transparente
+- **Observable**: Trazabilidad completa de todas las interacciones de los agentes
 
-## REMINDER - MAJOR TIP!!
+## RECORDATORIO - ¡CONSEJO IMPORTANTE!
 
-There's a file `gameplan.md` in the project root that describes the entire Alex project to an AI Agent, so that you can ask questions and get help. There's also an identical `CLAUDE.md` and `AGENTS.md` file. If you need help, simply start your favorite AI Agent, and give it this instruction:
+Hay un archivo `gameplan.md` en la raíz del proyecto que describe todo el proyecto Alex para un Agente de IA, para que puedas hacer preguntas y obtener ayuda. También hay un archivo idéntico `CLAUDE.md` y `AGENTS.md`. Si necesitas ayuda, simplemente inicia tu Agente de IA favorito y dale esta instrucción:
 
-> I am a student on the course AI in Production. We are in the course repo. Read the file `gameplan.md` for a briefing on the project. Read this file completely and read all the linked guides carefully. Do not start any work apart from reading and checking directory structure. When you have completed all reading, let me know if you have questions before we get started.
+> Soy un estudiante del curso AI in Production. Estamos en el repositorio del curso. Lee el archivo `gameplan.md` para obtener información general del proyecto. Lee este archivo completamente y lee todas las guías enlazadas cuidadosamente. No comiences ningún trabajo aparte de leer y revisar la estructura de directorios. Cuando termines toda la lectura, hazme saber si tienes preguntas antes de que empecemos.
 
-After answering questions, say exactly which guide you're on and any issues. Be careful to validate every suggestion; always ask for the root cause and evidence of problems. LLMs have a tendency to jump to conclusions, but they often correct themselves when they need to provide evidence.
+Después de responder las preguntas, indica exactamente en qué guía te encuentras y cualquier problema. Ten cuidado al validar cada sugerencia; siempre pregunta por la causa raíz y evidencia de los problemas. Los LLM tienden a sacar conclusiones precipitadas, pero a menudo se corrigen cuando deben aportar evidencia.
 
-## Section 1: Scalability
+## Sección 1: Escalabilidad
 
-Our serverless architecture is already designed for automatic scaling, but let's explore how to configure it for enterprise-level traffic.
+Nuestra arquitectura serverless ya está diseñada para escalado automático, pero vamos a explorar cómo configurarla para tráfico a nivel empresarial.
 
-### Understanding Serverless Scalability
+### Entendiendo la Escalabilidad Serverless
 
-The beauty of our serverless architecture is that AWS automatically scales components based on demand:
+La ventaja de nuestra arquitectura serverless es que AWS escala los componentes automáticamente según la demanda:
 
-1. **Lambda Functions** scale automatically:
+1. **Funciones Lambda** escalan automáticamente:
 
-   - Concurrent executions: Default 1,000 (can be increased to 10,000+)
-   - Each agent can handle multiple requests simultaneously
-   - No server management required
+   - Ejecuciones concurrentes: Por defecto 1,000 (se puede aumentar a 10,000+)
+   - Cada agente puede manejar múltiples solicitudes simultáneamente
+   - No se requiere gestión de servidores
 
-2. **Aurora Serverless v2** scales automatically:
+2. **Aurora Serverless v2** escala automáticamente:
 
-   - From 0.5 to 1 ACU (Aurora Capacity Units) by default
-   - Can scale up to 128 ACUs for high traffic
-   - Scales in ~15 seconds based on load
+   - De 0.5 a 1 ACU (Aurora Capacity Units) por defecto
+   - Puede escalar hasta 128 ACUs para tráfico alto
+   - Escala en ~15 segundos de acuerdo a la carga
 
-3. **API Gateway** handles millions of requests:
+3. **API Gateway** maneja millones de solicitudes:
 
-   - Default throttle: 10,000 requests/second
-   - Burst: 5,000 requests
-   - Can be increased via AWS support
+   - Límite por defecto: 10,000 solicitudes/segundo
+   - Ráfaga: 5,000 solicitudes
+   - Se puede aumentar a través de soporte de AWS
 
-4. **SQS** provides unlimited throughput:
-   - Standard queues: Nearly unlimited TPS
-   - FIFO queues: 300 messages/second (can batch to 3,000)
+4. **SQS** ofrece rendimiento ilimitado:
+   - Colas estándar: Casi ilimitadas TPS
+   - Colas FIFO: 300 mensajes/segundo (se puede agrupar hasta 3,000)
 
-### Configuring for Higher Scale
+### Configuración para Mayor Escalabilidad
 
-To prepare for enterprise traffic, you can adjust these settings in the Terraform configurations:
+Para prepararte para tráfico empresarial, puedes ajustar estos parámetros en las configuraciones de Terraform:
 
-**In `terraform/5_database/main.tf`:**
+**En `terraform/5_database/main.tf`:**
 
 ```hcl
 resource "aws_rds_cluster" "aurora" {
-  # Increase max capacity for high traffic
+  # Incrementar la capacidad máxima para tráfico alto
   serverlessv2_scaling_configuration {
-    max_capacity = 16  # Increase from 1 to 16 ACUs
-    min_capacity = 0.5 # Keep minimum low for cost efficiency
+    max_capacity = 16  # Incrementar de 1 a 16 ACUs
+    min_capacity = 0.5 # Mantener el mínimo bajo para eficiencia en costos
   }
 }
 ```
 
-**In `terraform/6_agents/main.tf`:**
+**En `terraform/6_agents/main.tf`:**
 
 ```hcl
 resource "aws_lambda_function" "planner" {
-  # Increase memory for faster processing
-  memory_size = 10240  # Increase from 3072 to 10GB
-  timeout     = 900    # Keep at 15 minutes max
+  # Incrementar la memoria para procesar más rápido
+  memory_size = 10240  # Incrementar de 3072 a 10GB
+  timeout     = 900    # Mantener máx. en 15 minutos
 
-  # Add reserved concurrent executions for guaranteed capacity
-  reserved_concurrent_executions = 100  # Guarantee 100 concurrent
+  # Añadir ejecuciones concurrentes reservadas para capacidad garantizada
+  reserved_concurrent_executions = 100  # Garantizar 100 concurrentes
 }
 ```
 
-**In `terraform/7_frontend/main.tf`:**
+**En `terraform/7_frontend/main.tf`:**
 
 ```hcl
 resource "aws_apigatewayv2_stage" "api" {
-  # Configure throttling for protection
+  # Configurar limitaciones por protección
   default_route_settings {
-    throttle_rate_limit  = 10000  # Requests per second
-    throttle_burst_limit = 5000   # Burst capacity
+    throttle_rate_limit  = 10000  # Solicitudes por segundo
+    throttle_burst_limit = 5000   # Capacidad de ráfaga
   }
 }
 ```
 
-### Load Testing Your Application
+### Pruebas de Carga de Tu Aplicación
 
-Before going to production, test your scalability:
+Antes de ir a producción, prueba tu escalabilidad:
 
-**For macOS/Linux:**
+**Para macOS/Linux:**
 
 ```bash
-# Install Apache Bench
+# Instalar Apache Bench
 apt-get install apache2-utils  # Ubuntu/Debian
 brew install apache2-utils     # macOS
 
-# Test API endpoint (replace with your API URL)
+# Probar el endpoint de la API (sustituye con tu URL de API)
 ab -n 1000 -c 50 -H "Authorization: Bearer YOUR_TOKEN" \
    https://your-api.execute-api.region.amazonaws.com/api/user
 ```
 
-**For Windows:**
+**Para Windows:**
 
 ```powershell
-# Install Apache Bench via XAMPP or use PowerShell's Invoke-WebRequest
-# Option 1: Download XAMPP which includes Apache Bench
-# Visit: https://www.apachefriends.org/download.html
+# Instalar Apache Bench vía XAMPP o usar Invoke-WebRequest de PowerShell
+# Opción 1: Descargar XAMPP que incluye Apache Bench
+# Visitar: https://www.apachefriends.org/download.html
 
-# Option 2: Use PowerShell for simple load testing
+# Opción 2: Usar PowerShell para prueba de carga simple
 $headers = @{"Authorization" = "Bearer YOUR_TOKEN"}
 $url = "https://your-api.execute-api.region.amazonaws.com/api/user"
 
-# Run 100 requests sequentially
+# Ejecutar 100 solicitudes secuenciales
 1..100 | ForEach-Object {
     Invoke-WebRequest -Uri $url -Headers $headers -Method GET
     Write-Host "Request $_ completed"
 }
 
-# For concurrent requests, consider using a tool like JMeter (cross-platform)
-# Download from: https://jmeter.apache.org/download_jmeter.cgi
+# Para solicitudes concurrentes, considera usar una herramienta como JMeter (multiplataforma)
+# Descárgalo de: https://jmeter.apache.org/download_jmeter.cgi
 ```
 
-### Cost Optimization at Scale
+### Optimización de Costos a Escala
 
-Monitor and optimize costs as you scale:
+Monitorea y optimiza los costos mientras escalas:
 
-1. **Use AWS Cost Explorer** to track spending
-2. **Set up billing alerts** for unexpected costs
-3. **Optimize CloudFront caching** - While CloudFront automatically caches static content from your S3 bucket, you can improve performance and reduce costs by configuring cache behaviors. Set longer TTLs (Time To Live) for assets that change infrequently (like images, CSS, JS files) using Cache-Control headers. This reduces origin requests to S3, lowering data transfer costs and improving response times.
-4. **Consider Step Functions** for complex orchestrations at scale
+1. **Usa AWS Cost Explorer** para rastrear tu gasto
+2. **Configura alertas de facturación** para costos inesperados
+3. **Optimiza el caché de CloudFront** - Aunque CloudFront almacena en caché automáticamente contenido estático de tu bucket de S3, puedes mejorar el rendimiento y reducir costos ajustando comportamientos de caché. Establece TTL más largos para recursos que cambian poco (imágenes, CSS, JS) usando encabezados Cache-Control. Esto reduce las solicitudes al origen (S3), bajando los costos de transferencia y mejorando los tiempos de respuesta.
+4. **Considera Step Functions** para orquestaciones complejas a escala
 
-## Section 2: Security
+## Sección 2: Seguridad
 
-Our application already implements multiple security best practices. Let's review them and explore additional enterprise security features.
+Nuestra aplicación ya implementa diversas buenas prácticas de seguridad. Vamos a repasarlas y explorar funcionalidades de seguridad empresarial adicionales.
 
-### Current Security Implementation
+### Implementación Actual de Seguridad
 
-#### 1. **IAM Least Privilege Access**
+#### 1. **IAM Acceso de Menor Privilegio**
 
-Each Lambda function has minimal required permissions:
+Cada función Lambda tiene los permisos mínimos requeridos:
 
 ```hcl
-# In terraform/6_agents/main.tf
+# En terraform/6_agents/main.tf
 resource "aws_iam_role_policy" "planner_policy" {
   policy = jsonencode({
     Statement = [
@@ -171,62 +171,62 @@ resource "aws_iam_role_policy" "planner_policy" {
 }
 ```
 
-#### 2. **JWT Authentication with Clerk**
+#### 2. **Autenticación JWT con Clerk**
 
-All API calls require valid JWT tokens:
+Todas las llamadas a la API requieren tokens JWT válidos:
 
-- Tokens expire after 1 hour
-- **JWKS endpoint for key rotation** - Clerk automatically rotates signing keys for security. The JWKS (JSON Web Key Set) endpoint provides the current public keys used to verify JWT signatures. This means even if a key is compromised, it will be automatically rotated, and your application fetches the new keys without any code changes.
-- **User context validated on every request** - Every API call includes a JWT token that is cryptographically verified using Clerk's public keys. This ensures the user is who they claim to be, their session is still valid, and the token hasn't been tampered with. Invalid or expired tokens are rejected before any business logic executes.
+- Los tokens expiran después de 1 hora
+- **Endpoint JWKS para rotación de claves** - Clerk rota automáticamente las claves de firma por seguridad. El endpoint JWKS (JSON Web Key Set) provee las claves públicas actuales usadas para verificar firmas JWT. Así, en caso de compromiso de clave, se rota automáticamente y tu app obtiene las nuevas sin cambios de código.
+- **Contexto de usuario validado en cada petición** - Cada llamada incluye un token JWT verificado criptográficamente usando las claves públicas de Clerk. Esto asegura que el usuario es quien dice ser, su sesión sigue válida y el token no fue manipulado. Tokens inválidos o expirados se rechazan antes de cualquier lógica de negocio.
 
-#### 3. **API Gateway Throttling**
+#### 3. **Limitación de API Gateway**
 
-**Protection against DDoS and abuse** - DDoS (Distributed Denial of Service) attacks attempt to overwhelm your application by flooding it with requests from multiple sources. API Gateway's throttling limits the number of requests per second, automatically rejecting excess traffic. This protects your Lambda functions from being overwhelmed and prevents runaway costs from malicious traffic:
+**Protección contra DDoS y abuso** - Los ataques DDoS (Denegación de Servicio Distribuido) intentan saturar tu aplicación inundándola de solicitudes múltiples. El throttling de API Gateway limita solicitudes por segundo, rechazando el exceso automáticamente. Así proteges tus Lambdas y evitas costos descontrolados originados por tráfico malicioso:
 
 ```hcl
-throttle_rate_limit  = 100   # 100 requests per second per user
-throttle_burst_limit = 200   # Burst capacity
+throttle_rate_limit  = 100   # 100 solicitudes por segundo por usuario
+throttle_burst_limit = 200   # Capacidad de ráfaga
 ```
 
-#### 4. **CORS Controls**
+#### 4. **Control de CORS**
 
-Strict CORS configuration:
+Configuración CORS estricta:
 
-- **Origin validation** - Only allows requests from your specific frontend domain, preventing malicious websites from making API calls on behalf of your users
-- **Credentials not allowed with wildcard origins** - Prevents credential theft by ensuring authentication cookies/tokens are only sent to explicitly trusted origins, not to any website
-- **Preflight caching for performance** - Browser caches CORS preflight responses, reducing the number of OPTIONS requests and improving API response times
+- **Validación de origen** - Solo permite solicitudes desde tu dominio frontend específico, evitando que sitios maliciosos hagan llamadas en nombre del usuario
+- **No se permiten credenciales con orígenes comodín** - Previene robo de credenciales asegurando que cookies/tokens de autenticación solo se envíen a orígenes explícitamente confiables
+- **Caché preflight para rendimiento** - El navegador guarda las respuestas preflight, reduciendo las peticiones OPTIONS y mejorando la respuesta API
 
-#### 5. **XSS Protection**
+#### 5. **Protección XSS**
 
-**Cross-Site Scripting (XSS) prevention** - XSS attacks inject malicious scripts into your web pages that execute in users' browsers, potentially stealing credentials or personal data. Content Security Policy (CSP) headers tell the browser which sources of content are trusted, blocking any unauthorized scripts from executing:
+**Prevención de Cross-Site Scripting (XSS)** - Los ataques XSS inyectan scripts maliciosos en tus páginas ejecutándose en el navegador del usuario, robando credenciales o datos personales. Las cabeceras Content Security Policy (CSP) indican al navegador qué orígenes de contenido son válidos, bloqueando scripts no autorizados:
 
 ```javascript
-// In frontend pages
+// En las páginas frontend
 <meta
   httpEquiv="Content-Security-Policy"
   content="default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.com; style-src 'self' 'unsafe-inline';"
 />
 ```
 
-#### 6. **Secrets Management**
+#### 6. **Gestión de Secretos**
 
-Using AWS Secrets Manager:
+Usando AWS Secrets Manager:
 
-- Database credentials never in code
-- Automatic rotation capability
-- Encrypted at rest with KMS
+- Credenciales de base de datos nunca en el código
+- Rotación automática disponible
+- Cifrado en reposo con KMS
 
-**To view your secrets:** Navigate to AWS Console → Secrets Manager → Select your region (us-east-1) → You'll see secrets like `alex-database-secret` containing your Aurora credentials
+**Para ver tus secretos:** Ve a AWS Console → Secrets Manager → Selecciona tu región (us-east-1) → Verás secretos como `alex-database-secret` con las credenciales Aurora
 
-### Additional Enterprise Security Features
+### Características Extra de Seguridad Empresarial
 
-To further enhance security, consider implementing:
+Para robustecer aún más la seguridad, considera implementar:
 
 #### 1. **AWS WAF (Web Application Firewall)**
 
-**AWS WAF** provides an additional layer of security by filtering malicious web traffic before it reaches your application. It protects against common attacks like SQL injection, cross-site scripting, and bot traffic. WAF uses rules to inspect incoming requests and can block, allow, or count requests based on conditions you define. While powerful, WAF is a paid add-on service with costs based on the number of rules and requests processed.
+**AWS WAF** añade otra capa de protección filtrando tráfico web malicioso antes de llegar a tu aplicación. Protege contra ataques conocidos como SQL Injection, XSS y bots. WAF utiliza reglas para inspeccionar cada solicitud y puede bloquear, permitir o contar solicitudes según condiciones definidas. Es un servicio adicional de pago, según reglas y número de solicitudes.
 
-Add to `terraform/7_frontend/main.tf`:
+Añadir en `terraform/7_frontend/main.tf`:
 
 ```hcl
 resource "aws_wafv2_web_acl" "api_protection" {
@@ -271,11 +271,11 @@ resource "aws_wafv2_web_acl" "api_protection" {
 }
 ```
 
-#### 2. **VPC Endpoints for Private Communication**
+#### 2. **VPC Endpoints para Comunicación Privada**
 
-**VPC Endpoints** allow your Lambda functions to communicate with AWS services without traffic leaving the AWS network. This improves security by avoiding the public internet, reduces data transfer costs, and provides better performance with lower latency. While VPC endpoints are free to create, you pay for data processing (typically $0.01 per GB). This is especially valuable for high-security environments where data should never traverse the public internet.
+**VPC Endpoints** permiten que tus Lambdas se comuniquen con AWS sin que el tráfico salga a internet pública. Así mejoras la seguridad, reduces costos de transferencia de datos y obtienes menor latencia. Los endpoints VPC son gratuitos de crear, se cobra el procesamiento de datos (~$0.01/GB). Es ideal en entornos de máxima seguridad donde los datos nunca deben salir de AWS.
 
-Keep traffic within AWS network:
+Mantener el tráfico dentro de AWS:
 
 ```hcl
 resource "aws_vpc_endpoint" "s3" {
@@ -284,9 +284,9 @@ resource "aws_vpc_endpoint" "s3" {
 }
 ```
 
-#### 3. **AWS GuardDuty for Threat Detection**
+#### 3. **AWS GuardDuty para Detección de Amenazas**
 
-**AWS GuardDuty** is a managed threat detection service that continuously monitors your AWS accounts and workloads for malicious activity. It uses machine learning to analyze VPC Flow Logs, CloudTrail events, and DNS logs to identify threats like cryptocurrency mining, credential compromise, and unusual API calls. GuardDuty requires no infrastructure to manage but is a paid service (approximately $1 per GB of logs analyzed). It's particularly valuable for detecting sophisticated attacks that might bypass other security layers.
+**AWS GuardDuty** es un servicio gestionado de detección de amenazas que monitorea cuentas y cargas de trabajo por actividad maliciosa. Utiliza machine learning sobre VPC Flow Logs, eventos CloudTrail y logs DNS para detectar minería de criptomonedas, robo de credenciales, llamadas API atípicas, etc. No requiere infraestructura, pero es de pago (~$1 por GB de logs analizados). Es muy útil para detectar ataques sofisticados que podrían evadir otras capas.
 
 ```hcl
 resource "aws_guardduty_detector" "main" {
@@ -295,9 +295,9 @@ resource "aws_guardduty_detector" "main" {
 }
 ```
 
-#### 4. **Parameter Validation**
+#### 4. **Validación de Parámetros**
 
-Add to Lambda functions:
+Añadir en Lambdas:
 
 ```python
 from pydantic import validator
@@ -313,22 +313,22 @@ class PositionCreate(BaseModel):
         return v
 ```
 
-## Section 3: Monitoring
+## Sección 3: Monitoreo
 
-Let's enhance our logging and create comprehensive CloudWatch dashboards to monitor our application.
+Vamos a mejorar nuestros logs y crear dashboards de CloudWatch para monitorear la app.
 
-### Enhanced Logging Implementation
+### Implementación Mejorada de Logs
 
-First, let's ensure our agents and API have comprehensive logging:
+Primero, aseguremos que agentes y API tengan logs completos:
 
-**For the API (backend/api/main.py):**
+**Para la API (`backend/api/main.py`):**
 
 ```python
 import logging
 import json
 from datetime import datetime
 
-# Configure structured logging
+# Configura logs estructurados
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -343,7 +343,7 @@ class StructuredLogger:
         }
         logger.info(json.dumps(log_entry))
 
-# Add to endpoints
+# Añadir al endpoint
 @app.post("/api/analyze")
 async def trigger_analysis(user=Depends(clerk_guard)):
     StructuredLogger.log_event(
@@ -351,10 +351,10 @@ async def trigger_analysis(user=Depends(clerk_guard)):
         user_id=user.clerk_user_id,
         details={"accounts": user_id}
     )
-    # ... rest of endpoint
+    # ... resto del endpoint
 ```
 
-**For agents (example in `backend/planner/lambda_handler.py`):**
+**Para agentes (ejemplo en `backend/planner/lambda_handler.py`):**
 
 ```python
 import logging
@@ -367,7 +367,7 @@ logger.setLevel(logging.INFO)
 async def run_orchestrator(job_id: str) -> None:
     start_time = datetime.now(timezone.utc)
 
-    # Fetch the job once so we can log who triggered the run
+    # Obtener el job para loggear quién hizo la solicitud
     job = db.jobs.find_by_id(job_id)
     if not job:
         logger.error(f"Planner: Job {job_id} not found.")
@@ -381,7 +381,7 @@ async def run_orchestrator(job_id: str) -> None:
         "timestamp": start_time.isoformat(),
     }))
 
-    # ... perform tagging, price refresh, and build planner task ...
+    # ... realizar tagging, actualización de precios, etc. ...
 
     for agent_name in ["reporter", "charter", "retirement"]:
         logger.info(json.dumps({
@@ -391,7 +391,7 @@ async def run_orchestrator(job_id: str) -> None:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }))
 
-    # ... run the planner agent with Runner.run(...) ...
+    # ... correr el agente planner con Runner.run(...) ...
 
     end_time = datetime.now(timezone.utc)
     logger.info(json.dumps({
@@ -403,89 +403,89 @@ async def run_orchestrator(job_id: str) -> None:
     }))
 ```
 
-### Deploying and Verifying Logging Changes
+### Despliegue y Verificación de Cambios de Log
 
-After adding structured logging code (as I have already done for you in `backend/planner/lambda_handler.py`), you need to deploy the changes and verify them.
+Tras agregar logging estructurado (ya lo tienes en `backend/planner/lambda_handler.py`), debes desplegar y verificar:
 
-1.  **Package the new code:**
+1.  **Empaqueta el nuevo código:**
 
 ```bash
-# Navigate to the backend directory
+# Ir al directorio backend
 cd backend
 
-# Run the packaging script
+# Ejecutar el script de empaquetado
 uv run package_docker.py
 ```
 
-2.  **Deploy the new package to AWS:**
+2.  **Despliega el paquete a AWS:**
 
 ```bash
-# From the same backend directory
+# Desde backend
 uv run deploy_all_lambdas.py
 ```
 
-3.  **Trigger a new analysis:** Go to your CloudFront website and start a new portfolio analysi, then verify the cloudwatch log.
+3.  **Lanza un nuevo análisis:** Ingresa en tu sitio en CloudFront y prueba un nuevo análisis de portafolio, luego revisa los logs en CloudWatch.
 
-### Creating CloudWatch Dashboards
+### Crear Dashboards en CloudWatch
 
-From the terraform directory, from 8_enterprise:
+Desde el directorio terraform, desde 8_enterprise:
 
-Copy terraform.tfvars.example to terraform.tfvars and update the values, as usual.
+Copia terraform.tfvars.example a terraform.tfvars y actualiza los valores como siempre.
 
-Then:
+Después:
 
 `terraform init`
 
 `terraform apply`
 
-And follow the instructions to bring up your new CloudWatch dashboards for Bedrock & SageMaker, and Agent activity.
+Y sigue instrucciones para levantar tus nuevos dashboards de CloudWatch para Bedrock, SageMaker y actividad de los agentes.
 
-#### 3. **SQS Queue Monitoring**
+#### 3. **Monitoreo de Queues SQS**
 
-Navigate to SQS console to view:
+En la consola SQS visualiza:
 
-- Messages in flight
-- Message age
-- Throughput metrics
-- **Dead Letter Queue (DLQ) monitoring** - Failed messages automatically move to the DLQ after multiple processing attempts. Monitor the DLQ for patterns in failures to identify systematic issues. Set up CloudWatch alarms when messages appear in the DLQ to investigate problems quickly.
+- Mensajes en vuelo
+- Edad de los mensajes
+- Métricas de throughput
+- **Monitoreo DLQ (Dead Letter Queue)** - Mensajes fallidos pasan automáticamente al DLQ tras varios intentos. Monitorea el DLQ para detectar patrones de fallos. Configura alarmas CloudWatch cuando aparezcan mensajes para investigar rápido.
 
-### Setting Up CloudWatch Alarms
+### Configuración de Alarmas CloudWatch
 
-To create alarms for critical metrics, use the AWS Console:
+Para crear alarmas de métricas críticas, usa la AWS Console:
 
-1. **Sign in to AWS Console** as the root user (or an IAM user with CloudWatch permissions)
-2. **Navigate to CloudWatch** → Select "Alarms" from the left sidebar → Click "Create alarm"
-3. **Select metric** → Choose "Lambda" → "By Function Name" → Select your function (e.g., alex-api)
-4. **Configure the alarm:**
-   - Metric: Errors
-   - Statistic: Sum
-   - Period: 5 minutes
-   - Threshold: Greater than 5
-5. **Set notification** → Create new SNS topic → Enter your email → Confirm subscription via email
-6. **Name your alarm** (e.g., "alex-api-errors") and create it
+1. **Inicia sesión en AWS Console** como root (o usuario IAM con permisos de CloudWatch)
+2. **Ve a CloudWatch** → Click en "Alarms" en el menú lateral → "Create alarm"
+3. **Selecciona métrica** → "Lambda" → "By Function Name" → Elige tu función (ej: alex-api)
+4. **Configura la alarma:**
+   - Métrica: Errors
+   - Estadística: Sum
+   - Período: 5 minutos
+   - Umbral: Mayor que 5
+5. **Configura notificación** → Nuevo SNS topic → Ingresa email → Confirma por email
+6. **Pon nombre a la alarma** (ej: "alex-api-errors") y créala
 
-Repeat this process for other critical metrics like Duration, Throttles, and Concurrent Executions.
+Repite para otras métricas críticas como Duración, Throttles y Ejecuciones Concurrentes.
 
-### Cost Monitoring
+### Monitoreo de Costos
 
-**You already have AWS billing alerts configured from earlier guides!** As a reminder, regularly check your spending:
+**¡Ya tienes alertas de billing desde guías previas!** Recuerda revisar tus gastos regularmente:
 
-1. **Navigate to AWS Console** → Billing Dashboard (top-right account menu)
-2. **Review your current month's charges** - Check the "Bills" section
-3. **Monitor your configured budget alerts** - You should have alerts at 50%, 80%, and 100% of your budget
-4. **Use Cost Explorer** for detailed analysis - Filter by service to see where costs are accumulating
+1. **AWS Console** → Dashboard de Facturación (menú superior derecho)
+2. **Revisa los cargos del mes** - Ve a "Bills"
+3. **Monitorea tus alertas de presupuesto** - Debes tener alertas al 50%, 80% y 100%
+4. **Usa Cost Explorer** para análisis detallado - Filtra por servicio para saber qué consume más
 
-**Check costs frequently** during development and especially after deploying new features. Lambda and API Gateway costs can surprise you with high traffic!
+**¡Revisa costos frecuentemente!** Durante desarrollo y tras cualquier despliegue; Lambda y API Gateway pueden salir costosos con mucho tráfico.
 
-## Section 4: Guardrails
+## Sección 4: Guardrails
 
-**Guardrails are essential safety mechanisms for AI systems.** While advanced agent frameworks often include sophisticated guardrail features, at their core, guardrails are simply validation checks you implement in code - tests that run before or after your agents execute to ensure outputs are safe and correct. The best guardrails are implemented directly in your code where you have full control over the validation logic.
+**Los guardrails son mecanismos de seguridad esenciales en sistemas IA.** Aunque los frameworks avanzados suelen incluir guardrails sofisticados, en esencia, los guardrails son validaciones que implementas en tu código: pruebas que ejecutas antes o después del agente para asegurar que las salidas sean seguras y correctas. Los mejores guardrails están en el código, donde tienes control absoluto sobre la lógica.
 
-Let's implement validation and safety checks to prevent AI errors from affecting users.
+Impletemos validaciones y chequeos para evitar que errores de IA afecten a los usuarios.
 
-### Charter Agent Output Validation
+### Validación de Salida del Charter Agent
 
-Add this validation code to `backend/charter/agent.py` to ensure well-formed JSON output:
+Agrega este código de validación en `backend/charter/agent.py` para asegurar que la salida sea JSON bien formado:
 
 ```python
 import json
@@ -496,23 +496,23 @@ logger = logging.getLogger()
 
 def validate_chart_data(chart_json: str) -> tuple[bool, str, Dict[Any, Any]]:
     """
-    Validates that charter agent output is well-formed JSON with expected structure.
-    Returns (is_valid, error_message, parsed_data)
+    Valida que la salida del charter agent sea JSON bien formado con la estructura esperada.
+    Retorna (is_valid, error_message, parsed_data)
     """
     try:
-        # Parse JSON
+        # Parsear JSON
         data = json.loads(chart_json)
 
-        # Validate expected structure
+        # Validar estructura esperada
         required_keys = ["charts"]
         if not all(key in data for key in required_keys):
             return False, f"Missing required keys. Expected: {required_keys}", {}
 
-        # Validate charts array
+        # Validar que charts sea arreglo
         if not isinstance(data["charts"], list):
             return False, "Charts must be an array", {}
 
-        # Validate each chart
+        # Validar cada gráfico
         for i, chart in enumerate(data["charts"]):
             if "type" not in chart:
                 return False, f"Chart {i} missing 'type' field", {}
@@ -520,11 +520,11 @@ def validate_chart_data(chart_json: str) -> tuple[bool, str, Dict[Any, Any]]:
             if "data" not in chart:
                 return False, f"Chart {i} missing 'data' field", {}
 
-            # Validate chart data is array
+            # Validar que data es array
             if not isinstance(chart["data"], list):
                 return False, f"Chart {i} data must be an array", {}
 
-            # Validate data points have required fields based on chart type
+            # Verificar campos según tipo de gráfico
             if chart["type"] == "pie":
                 for point in chart["data"]:
                     if "name" not in point or "value" not in point:
@@ -543,18 +543,18 @@ def validate_chart_data(chart_json: str) -> tuple[bool, str, Dict[Any, Any]]:
         logger.error(f"Unexpected error validating chart data: {e}")
         return False, f"Validation error: {e}", {}
 
-# Use in your charter agent:
+# Usar en tu charter agent:
 async def run_charter_agent(job_id: str, task: str) -> str:
-    # ... existing agent code ...
+    # ... código existente del agente ...
 
     result = await Runner.run(agent, input=task, max_turns=10)
 
-    # Validate output
+    # Validar salida
     is_valid, error_msg, parsed_data = validate_chart_data(result.final_output)
 
     if not is_valid:
         logger.error(f"Charter agent produced invalid output for job {job_id}: {error_msg}")
-        # Return safe fallback
+        # Retorno seguro
         return json.dumps({
             "charts": [],
             "error": "Unable to generate charts at this time"
@@ -563,14 +563,14 @@ async def run_charter_agent(job_id: str, task: str) -> str:
     return json.dumps(parsed_data)
 ```
 
-### Input Validation Guardrails
+### Guardrails de Validación de Entrada
 
-Add to all agents to prevent prompt injection:
+Agrega a todos los agentes para evitar prompt injection:
 
 ```python
 def sanitize_user_input(text: str) -> str:
-    """Remove potential prompt injection attempts"""
-    # Remove common injection patterns
+    """Remover intentos potenciales de prompt injection"""
+    # Eliminar patrones comunes de inyección
     dangerous_patterns = [
         "ignore previous instructions",
         "disregard all prior",
@@ -588,33 +588,33 @@ def sanitize_user_input(text: str) -> str:
 
     return text
 
-# Use when processing user data
+# Usar al procesar datos de usuario
 user_goals = sanitize_user_input(user.retirement_goals or "")
 ```
 
-### Response Size Limits
+### Límites de Tamaño de Respuesta
 
-Prevent runaway token usage:
+Evita uso descontrolado de tokens:
 
 ```python
 def truncate_response(text: str, max_length: int = 50000) -> str:
-    """Ensure responses don't exceed reasonable size"""
+    """Asegura que las respuestas no excedan tamaño razonable"""
     if len(text) > max_length:
         logger.warning(f"Response truncated from {len(text)} to {max_length} characters")
         return text[:max_length] + "\n\n[Response truncated due to length]"
     return text
 ```
 
-### Retry Logic with Exponential Backoff
+### Retries con Backoff Exponencial
 
-Add resilience to agent invocations using the **tenacity** library, which we already use for handling rate limit errors:
+Agrega resiliencia a invocaciones de agentes usando la librería **tenacity**, ya presente para manejar errores de límite de tasa:
 
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import asyncio
 from typing import Optional
 
-# Define custom exceptions for retryable errors
+# Excepciones personalizadas para errores temporales
 class AgentTemporaryError(Exception):
     """Temporary error that should trigger retry"""
     pass
@@ -628,7 +628,7 @@ async def invoke_agent_with_retry(
     agent_name: str,
     payload: dict
 ) -> dict:
-    """Invoke agent with automatic retry using tenacity"""
+    """Invocar agente con retry automático usando tenacity"""
     try:
         response = await lambda_client.invoke(
             FunctionName=f"alex-{agent_name}",
@@ -638,7 +638,7 @@ async def invoke_agent_with_retry(
 
         result = json.loads(response['Payload'].read())
 
-        # Check for retryable errors in response
+        # Revisar errores retryables en respuesta
         if result.get('error_type') == 'RATE_LIMIT':
             raise AgentTemporaryError(f"Rate limit hit for {agent_name}")
 
@@ -646,39 +646,39 @@ async def invoke_agent_with_retry(
 
     except Exception as e:
         logger.warning(f"Agent {agent_name} invocation failed: {e}")
-        # Determine if error is retryable
+        # Determina si es error retryable
         if "throttled" in str(e).lower() or "timeout" in str(e).lower():
             raise AgentTemporaryError(f"Temporary error: {e}")
-        raise  # Non-retryable error
+        raise  # Error no retryable
 ```
 
-**Note:** We already have tenacity configured for handling rate limit errors in our agents. This pattern extends it to handle other temporary failures with exponential backoff.
+**Nota:** Ya tienes tenacity configurado para manejar límites de tasa en los agentes. Este patrón amplía el manejo a otros fallos temporales con backoff exponencial.
 
-## Section 5: Explainability
+## Sección 5: Explicabilidad
 
-Modern LLMs and agentic systems provide unprecedented transparency compared to traditional black-box AI. Let's implement explainability features to help users understand AI decision-making.
+Los LLMs y los sistemas agenticos modernos ofrecen transparencia sin precedentes frente a las IA tradicionales tipo "caja negra". Impletemos características de explicabilidad para que el usuario comprenda las decisiones de la IA.
 
-### The Evolution of Explainable AI
+### La Evolución de la IA Explicable
 
-In the early days of deep learning, neural networks were often criticized as "black boxes" - systems that produced outputs without clear reasoning. This was a serious concern in regulated industries like finance and healthcare.
+En los inicios del deep learning, las redes neuronales eran criticadas por ser "cajas negras", sin razonamiento claro en su salida. Esto era problemático en industrias reguladas como finanzas y salud.
 
-Modern Large Language Models (LLMs) and agentic systems address this concern through:
+Los LLMs modernos y sistemas agenticos resuelven esto mediante:
 
-1. **Natural language explanations** - AI can explain its reasoning in plain English
-2. **Chain-of-thought reasoning** - Step-by-step problem solving that's auditable
-3. **Structured outputs** - Predictable, parseable responses with clear logic
-4. **Prompt transparency** - The instructions given to AI are visible and modifiable
+1. **Explicaciones en lenguaje natural** - La IA puede justificar sus decisiones en texto plano
+2. **Cadena de razonamiento** - Resolución paso a paso verificable
+3. **Salidas estructuradas** - Respuestas predecibles, parseables y lógicas
+4. **Transparencia del prompt** - Las instrucciones a la IA son visibles y editables
 
-### Implementing Explainability in the Tagger Agent
+### Explicabilidad en el Tagger Agent
 
-Let's modify the Tagger agent to include rationale for its decisions. Add this to `backend/tagger/agent.py`:
+Modifica el agente Tagger para incluir una justificación de sus decisiones. Añade esto en `backend/tagger/agent.py`:
 
 ```python
 from pydantic import BaseModel, Field
 from typing import Dict
 
 class InstrumentClassificationWithRationale(BaseModel):
-    # Rationale MUST come first so LLM generates reasoning before answers
+    # La justificación DEBE ir primero para que el LLM la genere antes que las respuestas
     rationale: str = Field(
         description="Detailed explanation of why these classifications were chosen, including specific factors considered"
     )
@@ -702,7 +702,7 @@ class InstrumentClassificationWithRationale(BaseModel):
         example={"technology": 30.0, "healthcare": 20.0, "financial": 50.0}
     )
 
-# In your tagger agent function:
+# En la función de tu agente tagger:
 async def run_tagger_agent(instrument: dict) -> dict:
     model = LitellmModel(model=f"bedrock/{bedrock_model}")
 
@@ -722,7 +722,7 @@ async def run_tagger_agent(instrument: dict) -> dict:
 
         classification = result.final_output_as(InstrumentClassificationWithRationale)
 
-        # Log the rationale for audit trail
+        # Log de la justificación para trail de auditoría
         logger.info(json.dumps({
             "event": "CLASSIFICATION_RATIONALE",
             "symbol": instrument["symbol"],
@@ -730,7 +730,7 @@ async def run_tagger_agent(instrument: dict) -> dict:
             "timestamp": datetime.utcnow().isoformat()
         }))
 
-        # Return classification without rationale to planner
+        # Devuelve la clasificación sin justificación al planner
         return {
             "asset_class": classification.asset_class,
             "asset_class_allocation": classification.asset_class_allocation,
@@ -739,12 +739,12 @@ async def run_tagger_agent(instrument: dict) -> dict:
         }
 ```
 
-### Adding Explainability to Portfolio Recommendations
+### Explicabilidad en las Recomendaciones de Portafolio
 
-For the Reporter agent, include reasoning in recommendations:
+Para el agente Reporter, agrega razonamiento en sus recomendaciones:
 
 ```python
-# In templates.py
+# En templates.py
 ANALYSIS_INSTRUCTIONS_WITH_EXPLANATION = """
 When providing recommendations, always:
 1. Start with your reasoning process
@@ -761,9 +761,9 @@ Format each recommendation as:
 """
 ```
 
-### Audit Trail for Compliance
+### Log de Auditoría para Compliance
 
-Create a comprehensive audit log for all AI decisions:
+Crea log de auditoría integral para decisiones IA:
 
 ```python
 class AuditLogger:
@@ -789,210 +789,210 @@ class AuditLogger:
                 "size_bytes": len(json.dumps(output_data))
             },
             "duration_ms": duration_ms,
-            "compliance_check": "PASS"  # Add actual compliance logic
+            "compliance_check": "PASS"  # Añade lógica real de compliance
         }
 
-        # Store in CloudWatch for long-term retention
+        # Almacenar en CloudWatch (retención largo plazo)
         logger.info(json.dumps(audit_entry))
 
-        # Could also store in DynamoDB for querying
+        # Opcional: almacenar en DynamoDB para consultas
         return audit_entry
 ```
 
-## Section 6: Observability with LangFuse
+## Sección 6: Observabilidad con LangFuse
 
-LangFuse provides comprehensive tracing for LLM applications, giving you visibility into agent interactions, token usage, and performance metrics. We've integrated LangFuse throughout all our agents using a clean context manager pattern.
+LangFuse ofrece trazabilidad exhaustiva para aplicaciones LLM, permitiendo visibilidad total en interacciones de agentes, uso de tokens y métricas de rendimiento. Integramos LangFuse en todos los agentes usando un patrón de context manager limpio.
 
-### Our Implementation Approach
+### Enfoque de Implementación
 
-We've implemented a reusable observability pattern that:
+Implementamos un patrón de observabilidad reutilizable que:
 
-- Works transparently - agents function normally without LangFuse credentials
-- Uses a context manager for automatic trace flushing
-- Instruments the OpenAI Agents SDK via Pydantic Logfire
-- Provides comprehensive logging at every step
+- Funciona transparentemente - los agentes operan aunque no haya credenciales LangFuse
+- Usa context manager para flush automático de trazas
+- Instrumenta el OpenAI Agents SDK vía Pydantic Logfire
+- Proporciona logging detallado en cada paso
 
-### Setting Up LangFuse Account
+### Crear Cuenta en LangFuse
 
-**Step 1: Create Your LangFuse Account**
+**Paso 1: Crea tu cuenta en LangFuse**
 
-1. Go to https://cloud.langfuse.com
-2. Sign up for a free account
-3. Create an organization (required for the first time)
-4. Create a new project called "alex-financial-advisor"
-5. Navigate to Settings → API Keys
-6. Create a new API key pair
-7. Copy your Public Key and Secret Key (you'll need these for configuration)
+1. Ve a https://cloud.langfuse.com
+2. Regístrate gratis
+3. Crea una organización (requerido la primera vez)
+4. Crea un proyecto nuevo llamado "alex-financial-advisor"
+5. Ve a Settings → API Keys
+6. Crea un par de llaves API
+7. Copia tu Public Key y Secret Key (las necesitarás para configurar)
 
-**Step 2: Configure Your Environment**
+**Paso 2: Configura tu entorno**
 
-Add your LangFuse credentials to `terraform/6_agents/terraform.tfvars`:
+Agrega tus credenciales de LangFuse a `terraform/6_agents/terraform.tfvars`:
 
 ```hcl
-# LangFuse observability (optional but recommended)
+# Observabilidad LangFuse (opcional pero recomendado)
 langfuse_public_key = "pk-lf-xxxxxxxxxx"
 langfuse_secret_key = "sk-lf-xxxxxxxxxx"
 langfuse_host       = "https://cloud.langfuse.com"
 
-# Required for trace export (even with Bedrock)
-openai_api_key = "sk-xxxxxxxxxx"  # Your OpenAI key
+# Requerido para exportar trazas (aunque se use Bedrock)
+openai_api_key = "sk-xxxxxxxxxx"  # Tu clave OpenAI
 ```
 
-**Important**: The `openai_api_key` is required for LangFuse traces to export properly, even though we're using Bedrock models. This is a quirk of the OpenTelemetry integration.
+**Importante**: El `openai_api_key` es necesario para que las trazas se exporten con LangFuse, incluso usando modelos Bedrock. Es un detalle de la integración OpenTelemetry.
 
-### How Our Integration Works
+### Así Funciona la Integración
 
-Each agent includes an `observability.py` module that provides a context manager for LangFuse integration:
+Cada agente incluye un módulo `observability.py` que brinda un context manager para integración con LangFuse:
 
 ```python
 from observability import observe
 
 def lambda_handler(event, context):
-    # Wrap entire handler with observability context
+    # Encapsular todo el handler con observabilidad
     with observe():
-        # Your lambda code here
+        # Tu código lambda aquí
         result = asyncio.run(run_agent(...))
         return {...}
-    # Traces automatically flush here
+    # Trazas se envían automáticamente aquí
 ```
 
-The `observe()` context manager:
+El context manager `observe()`:
 
-- Checks for LangFuse environment variables
-- Sets up Pydantic Logfire to instrument OpenAI Agents SDK
-- Configures the appropriate service name (e.g., 'alex_planner_agent')
-- Handles authentication gracefully
-- **Automatically flushes traces on exit** (critical for Lambda)
+- Verifica variables de entorno LangFuse
+- Configura Pydantic Logfire para instrumentar OpenAI Agents SDK
+- Asigna el nombre de servicio adecuado (ej: 'alex_planner_agent')
+- Maneja la autenticación de manera segura
+- **Hace flush automático de trazas al salir** (crítico en Lambda)
 
-### Observing Your Agents
+### Observar Tus Agentes
 
-**Step 3: Deploy with Observability**
+**Paso 3: Despliega con Observabilidad**
 
-From the `backend` directory:
+Desde `backend`:
 
 ```bash
-# Package all agents with observability
+# Empaqueta todos los agentes con observabilidad
 uv run deploy_all_lambdas.py --package
 ```
 
-From the `terraform/6_agents` directory:
+Desde `terraform/6_agents`:
 
 ```bash
-# Deploy infrastructure with LangFuse variables
+# Despliega infraestructura con variables LangFuse
 terraform apply
 ```
 
-From the `backend` directory:
+Desde `backend`:
 
 ```bash
-# Watch agent logs in real-time
+# Monitorea logs de agentes en tiempo real
 uv run watch_agents.py
 ```
 
-Finally, from the `scripts` directory:
+Finalmente, en `scripts`:
 
 ```bash
-# Deploy the complete application
+# Despliega la aplicación completa
 uv run deploy.py
 ```
 
-**Step 4: View Traces in LangFuse Dashboard**
+**Paso 4: Ver las trazas en el dashboard de LangFuse**
 
-Once deployed and running, you have two options for viewing traces:
+Una vez desplegado y en ejecución, tienes dos opciones para ver las trazas:
 
-1. **LangFuse Dashboard** (https://cloud.langfuse.com) - Visit your project to see:
-2. **OpenAI Traces Dashboard** - If you're using OpenAI models, you can also view traces at https://platform.openai.com/traces
+1. **LangFuse Dashboard** (https://cloud.langfuse.com) - Entra a tu proyecto y ve:
+2. **Dashboard de trazas de OpenAI** - Si usas modelos OpenAI, también puedes ver en https://platform.openai.com/traces
 
-In the LangFuse dashboard, you'll see:
+En el tablero LangFuse visualizarás:
 
-1. **Agent Traces**
+1. **Trazas de agentes**
 
-   - Each agent execution appears as a trace
-   - Filter by service name: `alex_planner_agent`, `alex_reporter_agent`, etc.
-   - See the complete flow of agent interactions
-   - View token usage and costs
+   - Cada ejecución de agente aparece como traza
+   - Filtra por nombre de servicio: `alex_planner_agent`, `alex_reporter_agent`, etc.
+   - Ves el flujo completo de interacciones
+   - Revisa uso de tokens y costos
 
-2. **Performance Metrics**
+2. **Métricas de rendimiento**
 
-   - Response times for each agent
-   - Token consumption patterns
-   - Model performance comparison
-   - Success/failure rates
+   - Tiempos de respuesta de cada agente
+   - Patrones de consumo de tokens
+   - Comparación de modelos
+   - Tasa de éxitos/fallos
 
-3. **Debug Information**
-   - Exact prompts sent to models
-   - Complete responses received
-   - Error messages and stack traces
-   - Tool calls and their results
+3. **Información de depuración**
+   - Prompts exactos enviados al modelo
+   - Respuestas completas recibidas
+   - Mensajes de error y stack traces
+   - Llamadas a herramientas y resultados
 
-### Using the Watch Script
+### Uso del Watch Script
 
-We've created a monitoring script to watch all agent logs in real-time:
+Creamos un script para ver logs de agentes en tiempo real:
 
 ```bash
-# Run from backend directory
+# Desde backend
 uv run watch_agents.py
 
-# Options:
-uv run watch_agents.py --lookback 10  # Look back 10 minutes
-uv run watch_agents.py --interval 1   # Poll every 1 second
-uv run watch_agents.py --region us-west-2  # Different region
+# Opciones:
+uv run watch_agents.py --lookback 10  # Busca 10 minutos hacia atrás
+uv run watch_agents.py --interval 1   # Cada segundo
+uv run watch_agents.py --region us-west-2  # Otra región
 ```
 
-The watch script shows:
+El script muestra:
 
-- Color-coded output by agent (PLANNER=blue, REPORTER=green, etc.)
-- LangFuse-related logs in purple
-- Errors in red
-- Real-time updates from all 5 agents simultaneously
+- Color por agente (PLANNER=azul, REPORTER=verde, etc.)
+- Logs LangFuse en morado
+- Errores en rojo
+- Actualizaciones en vivo de los 5 agentes a la vez
 
-### Troubleshooting Observability
+### Problemas Comunes con Observabilidad
 
-**If traces aren't appearing in LangFuse:**
+**Si no ves trazas en LangFuse:**
 
-1. **Check environment variables are set:**
+1. **Verifica variables de entorno:**
 
    ```bash
    aws lambda get-function-configuration --function-name alex-planner | grep LANGFUSE
    ```
 
-2. **Verify OPENAI_API_KEY is set** (required for export):
+2. **Verifica que OPENAI_API_KEY esté definida** (requerido p/exportar):
 
    ```bash
    aws lambda get-function-configuration --function-name alex-planner | grep OPENAI_API_KEY
    ```
 
-3. **Watch CloudWatch logs for LangFuse messages:**
+3. **Mira logs de CloudWatch por mensajes LangFuse:**
 
    ```bash
    uv run watch_agents.py --lookback 5
    ```
 
-   Look for messages like:
+   Busca mensajes como:
 
    - "🔍 Observability: Setting up LangFuse..."
    - "✅ Observability: Traces flushed successfully"
    - "❌ Observability: Failed to flush traces"
 
-4. **Check LangFuse dashboard for any traces** - sometimes they take 30-60 seconds to appear
+4. **Revisa el tablero LangFuse por trazas** - a veces demoran 30-60 seg.
 
-**Common Issues:**
+**Problemas típicos:**
 
-- **No traces but logs show success**: Usually means OPENAI_API_KEY is missing
-- **Auth check failed warning**: Normal if using free tier, traces still work
-- **Missing required package error**: Re-run package_docker.py to ensure dependencies are included
+- **No hay trazas pero logs son OK**: Normalmente falta OPENAI_API_KEY
+- **Auth check failed warning**: Normal si usas plan gratis, las trazas funcionan igual
+- **Missing required package error**: Reejecuta package_docker.py para incluir dependencias
 
-## Conclusion: Your Enterprise-Grade AI System
+## Conclusión: Tu IA Empresarial
 
-🎉 **Congratulations!** You've successfully deployed an enterprise-grade agentic AI system!
+🎉 **¡Felicidades!** Has desplegado un sistema IA agentico de nivel empresarial.
 
-### What You've Accomplished
+### Lo que has logrado
 
-You've built a production-ready financial advisory platform that is:
+Has construido una plataforma de asesoría financiera lista para producción que es:
 
-- **Scalable**: Serverless architecture automatically handles load from 1 to 1,000,000+ users
-- **Secure**: Multi-layered security with IAM, JWT auth, API throttling, CORS, XSS protection, and secrets management
-- **Robust & Monitored**: Comprehensive CloudWatch logging, dashboards, alarms, and SQS dead-letter queues for reliability
-- **Guarded**: Input validation, output verification, retry logic, and graceful error handling protect against AI failures
-- **Explainable**: AI decisions include rationale, audit trails track all operations, and reasoning is transparent
-- **Observable**: Complete LangFuse integration provides traces, token usage, costs, and performance metrics for every AI interaction
+- **Escalable**: Arquitectura serverless maneja desde 1 hasta 1,000,000+ usuarios sin cambios
+- **Segura**: Seguridad multinivel con IAM, auth JWT, limitación API, CORS, XSS y secretos seguros
+- **Robusta y Monitoreada**: Logs CloudWatch detallados, dashboards, alarmas y colas DLQ para confiabilidad
+- **Protegida**: Validación de entrada, verificación de salida, lógica de retry y manejo elegante de fallos IA
+- **Explicable**: Las decisiones de IA incluyen racional, logs de auditoría y razonamiento transparente
+- **Observable**: Integración LangFuse brinda trazabilidad, uso de tokens, costos y métricas de performance para cada interacción IA

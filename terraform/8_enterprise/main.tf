@@ -1,4 +1,4 @@
-# Part 8: Enterprise - CloudWatch Dashboards for Monitoring
+# Parte 8: Enterprise - Paneles de CloudWatch para Monitorización
 
 terraform {
   required_version = ">= 1.0"
@@ -14,7 +14,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Data sources
+# Fuentes de datos
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -29,7 +29,7 @@ locals {
 }
 
 # ========================================
-# Bedrock & AI Model Usage Dashboard
+# Panel de Uso de Bedrock y Modelos IA
 # ========================================
 
 resource "aws_cloudwatch_dashboard" "ai_model_usage" {
@@ -37,45 +37,45 @@ resource "aws_cloudwatch_dashboard" "ai_model_usage" {
 
   dashboard_body = jsonencode({
     widgets = [
-      # Bedrock Model Invocations
+      # Invocaciones de modelo Bedrock
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/Bedrock", "Invocations", "ModelId", var.bedrock_model_id, { stat = "Sum", label = "Model Invocations", id = "m1", color = "#1f77b4" }],
-            [".", "InvocationClientErrors", ".", ".", { stat = "Sum", label = "Client Errors", id = "m2", color = "#d62728" }],
-            [".", "InvocationServerErrors", ".", ".", { stat = "Sum", label = "Server Errors", id = "m3", color = "#ff7f0e" }]
+            ["AWS/Bedrock", "Invocations", "ModelId", var.bedrock_model_id, { stat = "Sum", label = "Invocaciones de modelo", id = "m1", color = "#1f77b4" }],
+            [".", "InvocationClientErrors", ".", ".", { stat = "Sum", label = "Errores de cliente", id = "m2", color = "#d62728" }],
+            [".", "InvocationServerErrors", ".", ".", { stat = "Sum", label = "Errores de servidor", id = "m3", color = "#ff7f0e" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.bedrock_region
-          title   = "Bedrock Model Invocations (${var.bedrock_model_id})"
+          title   = "Invocaciones de modelo Bedrock (${var.bedrock_model_id})"
           period  = 300
           stat    = "Sum"
           yAxis = {
             left = {
-              label     = "Count"
+              label     = "Cantidad"
               showUnits = false
             }
           }
         }
       },
-      # Bedrock Token Usage
+      # Uso de tokens de Bedrock
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/Bedrock", "InputTokenCount", "ModelId", var.bedrock_model_id, { stat = "Sum", label = "Input Tokens", id = "t1", color = "#2ca02c" }],
-            [".", "OutputTokenCount", ".", ".", { stat = "Sum", label = "Output Tokens", id = "t2", color = "#9467bd" }]
+            ["AWS/Bedrock", "InputTokenCount", "ModelId", var.bedrock_model_id, { stat = "Sum", label = "Tokens de entrada", id = "t1", color = "#2ca02c" }],
+            [".", "OutputTokenCount", ".", ".", { stat = "Sum", label = "Tokens de salida", id = "t2", color = "#9467bd" }]
           ]
           view    = "timeSeries"
           stacked = true
           region  = var.bedrock_region
-          title   = "Bedrock Token Usage (${var.bedrock_model_id})"
+          title   = "Uso de tokens de Bedrock (${var.bedrock_model_id})"
           period  = 300
           stat    = "Sum"
           yAxis = {
@@ -86,73 +86,73 @@ resource "aws_cloudwatch_dashboard" "ai_model_usage" {
           }
         }
       },
-      # Bedrock Latency
+      # Latencia de Bedrock
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/Bedrock", "InvocationLatency", "ModelId", var.bedrock_model_id, { stat = "Average", label = "Average Latency", id = "l1", color = "#1f77b4" }],
-            [".", ".", ".", ".", { stat = "Maximum", label = "Max Latency", id = "l2", color = "#d62728" }],
-            [".", ".", ".", ".", { stat = "Minimum", label = "Min Latency", id = "l3", color = "#2ca02c" }]
+            ["AWS/Bedrock", "InvocationLatency", "ModelId", var.bedrock_model_id, { stat = "Average", label = "Latencia promedio", id = "l1", color = "#1f77b4" }],
+            [".", ".", ".", ".", { stat = "Maximum", label = "Latencia máx.", id = "l2", color = "#d62728" }],
+            [".", ".", ".", ".", { stat = "Minimum", label = "Latencia mín.", id = "l3", color = "#2ca02c" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.bedrock_region
-          title   = "Bedrock Response Latency (${var.bedrock_model_id})"
+          title   = "Latencia de respuesta de Bedrock (${var.bedrock_model_id})"
           period  = 300
           yAxis = {
             left = {
-              label     = "Latency (ms)"
+              label     = "Latencia (ms)"
               showUnits = false
             }
           }
         }
       },
-      # SageMaker Endpoint Invocations
+      # Invocaciones del endpoint de SageMaker
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocations\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s1", label = "Invocations", color = "#1f77b4" }],
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocation4XXErrors\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s2", label = "4XX Errors", color = "#ff7f0e" }],
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocation5XXErrors\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s3", label = "5XX Errors", color = "#d62728" }]
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocations\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s1", label = "Invocaciones", color = "#1f77b4" }],
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocation4XXErrors\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s2", label = "Errores 4XX", color = "#ff7f0e" }],
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"Invocation5XXErrors\" EndpointName=\"alex-embedding-endpoint\" ', 'Sum')", id = "s3", label = "Errores 5XX", color = "#d62728" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "SageMaker Embedding Endpoint Invocations"
+          title   = "Invocaciones del endpoint de embeddings SageMaker"
           period  = 300
           yAxis = {
             left = {
-              label     = "Count"
+              label     = "Cantidad"
               showUnits = false
             }
           }
         }
       },
-      # SageMaker Model Latency
+      # Latencia del modelo SageMaker
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Average')", id = "ml1", label = "Average Latency", color = "#2ca02c" }],
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Maximum')", id = "ml2", label = "Max Latency", color = "#d62728" }],
-            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Minimum')", id = "ml3", label = "Min Latency", color = "#1f77b4" }]
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Average')", id = "ml1", label = "Latencia promedio", color = "#2ca02c" }],
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Maximum')", id = "ml2", label = "Latencia máx.", color = "#d62728" }],
+            [{ expression = "SEARCH(' {AWS/SageMaker,EndpointName,VariantName} MetricName=\"ModelLatency\" EndpointName=\"alex-embedding-endpoint\" ', 'Minimum')", id = "ml3", label = "Latencia mín.", color = "#1f77b4" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "SageMaker Model Latency"
+          title   = "Latencia del modelo SageMaker"
           period  = 300
           yAxis = {
             left = {
-              label     = "Latency (μs)"
+              label     = "Latencia (μs)"
               showUnits = false
             }
           }
@@ -164,7 +164,7 @@ resource "aws_cloudwatch_dashboard" "ai_model_usage" {
 }
 
 # ========================================
-# Agent Performance Dashboard
+# Panel de Desempeño de Agentes
 # ========================================
 
 resource "aws_cloudwatch_dashboard" "agent_performance" {
@@ -172,7 +172,7 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
 
   dashboard_body = jsonencode({
     widgets = [
-      # Agent Execution Times
+      # Tiempos de ejecución de agentes
       {
         type   = "metric"
         width  = 12
@@ -188,45 +188,45 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "Agent Execution Times"
+          title   = "Tiempos de ejecución de agentes"
           period  = 300
           stat    = "Average"
           yAxis = {
             left = {
-              label     = "Duration (ms)"
+              label     = "Duración (ms)"
               showUnits = false
             }
           }
         }
       },
-      # Agent Error Rates
+      # Tasas de error de los agentes
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Errors", "FunctionName", "alex-planner", { stat = "Sum", label = "Planner Errors", id = "e1", color = "#1f77b4" }],
-            [".", ".", ".", "alex-reporter", { stat = "Sum", label = "Reporter Errors", id = "e2", color = "#2ca02c" }],
-            [".", ".", ".", "alex-charter", { stat = "Sum", label = "Charter Errors", id = "e3", color = "#ff7f0e" }],
-            [".", ".", ".", "alex-retirement", { stat = "Sum", label = "Retirement Errors", id = "e4", color = "#d62728" }],
-            [".", ".", ".", "alex-tagger", { stat = "Sum", label = "Tagger Errors", id = "e5", color = "#9467bd" }]
+            ["AWS/Lambda", "Errors", "FunctionName", "alex-planner", { stat = "Sum", label = "Errores Planner", id = "e1", color = "#1f77b4" }],
+            [".", ".", ".", "alex-reporter", { stat = "Sum", label = "Errores Reporter", id = "e2", color = "#2ca02c" }],
+            [".", ".", ".", "alex-charter", { stat = "Sum", label = "Errores Charter", id = "e3", color = "#ff7f0e" }],
+            [".", ".", ".", "alex-retirement", { stat = "Sum", label = "Errores Retirement", id = "e4", color = "#d62728" }],
+            [".", ".", ".", "alex-tagger", { stat = "Sum", label = "Errores Tagger", id = "e5", color = "#9467bd" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "Agent Error Rates"
+          title   = "Tasas de error de los agentes"
           period  = 300
           stat    = "Sum"
           yAxis = {
             left = {
-              label     = "Error Count"
+              label     = "Cantidad de errores"
               showUnits = false
             }
           }
         }
       },
-      # Agent Invocations
+      # Invocaciones de los agentes
       {
         type   = "metric"
         width  = 12
@@ -242,18 +242,18 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "Agent Invocation Counts"
+          title   = "Conteo de invocaciones de agentes"
           period  = 300
           stat    = "Sum"
           yAxis = {
             left = {
-              label     = "Invocation Count"
+              label     = "Número de invocaciones"
               showUnits = false
             }
           }
         }
       },
-      # Concurrent Executions
+      # Ejecuciones concurrentes
       {
         type   = "metric"
         width  = 12
@@ -269,39 +269,39 @@ resource "aws_cloudwatch_dashboard" "agent_performance" {
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "Concurrent Executions"
+          title   = "Ejecuciones concurrentes"
           period  = 300
           stat    = "Maximum"
           yAxis = {
             left = {
-              label     = "Concurrent Executions"
+              label     = "Ejecuciones concurrentes"
               showUnits = false
             }
           }
         }
       },
-      # Throttles
+      # Límites (Throttles)
       {
         type   = "metric"
         width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Throttles", "FunctionName", "alex-planner", { stat = "Sum", label = "Planner Throttles", id = "t1", color = "#1f77b4" }],
-            [".", ".", ".", "alex-reporter", { stat = "Sum", label = "Reporter Throttles", id = "t2", color = "#2ca02c" }],
-            [".", ".", ".", "alex-charter", { stat = "Sum", label = "Charter Throttles", id = "t3", color = "#ff7f0e" }],
-            [".", ".", ".", "alex-retirement", { stat = "Sum", label = "Retirement Throttles", id = "t4", color = "#d62728" }],
-            [".", ".", ".", "alex-tagger", { stat = "Sum", label = "Tagger Throttles", id = "t5", color = "#9467bd" }]
+            ["AWS/Lambda", "Throttles", "FunctionName", "alex-planner", { stat = "Sum", label = "Throttles Planner", id = "t1", color = "#1f77b4" }],
+            [".", ".", ".", "alex-reporter", { stat = "Sum", label = "Throttles Reporter", id = "t2", color = "#2ca02c" }],
+            [".", ".", ".", "alex-charter", { stat = "Sum", label = "Throttles Charter", id = "t3", color = "#ff7f0e" }],
+            [".", ".", ".", "alex-retirement", { stat = "Sum", label = "Throttles Retirement", id = "t4", color = "#d62728" }],
+            [".", ".", ".", "alex-tagger", { stat = "Sum", label = "Throttles Tagger", id = "t5", color = "#9467bd" }]
           ]
           view    = "timeSeries"
           stacked = false
           region  = var.aws_region
-          title   = "Agent Throttles"
+          title   = "Limitaciones de los agentes"
           period  = 300
           stat    = "Sum"
           yAxis = {
             left = {
-              label     = "Throttle Count"
+              label     = "Cantidad de restricciones"
               showUnits = false
             }
           }

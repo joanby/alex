@@ -1,5 +1,5 @@
 output "dashboard_urls" {
-  description = "URLs to access the CloudWatch dashboards"
+  description = "URLs para acceder a los dashboards de CloudWatch"
   value = {
     ai_model_usage    = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.ai_model_usage.dashboard_name}"
     agent_performance = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.agent_performance.dashboard_name}"
@@ -7,7 +7,7 @@ output "dashboard_urls" {
 }
 
 output "dashboard_names" {
-  description = "Names of the created dashboards"
+  description = "Nombres de los dashboards creados"
   value = {
     ai_model_usage    = aws_cloudwatch_dashboard.ai_model_usage.dashboard_name
     agent_performance = aws_cloudwatch_dashboard.agent_performance.dashboard_name
@@ -15,43 +15,43 @@ output "dashboard_names" {
 }
 
 output "setup_instructions" {
-  description = "Instructions for using the dashboards"
+  description = "Instrucciones para usar los dashboards"
   value = <<-EOT
 
-    ✅ CloudWatch Dashboards deployed successfully!
+    ✅ ¡Dashboards de CloudWatch desplegados correctamente!
 
-    Dashboards Created:
-    - AI Model Usage Dashboard: ${aws_cloudwatch_dashboard.ai_model_usage.dashboard_name}
-    - Agent Performance Dashboard: ${aws_cloudwatch_dashboard.agent_performance.dashboard_name}
+    Dashboards creados:
+    - Dashboard de Uso de Modelos de IA: ${aws_cloudwatch_dashboard.ai_model_usage.dashboard_name}
+    - Dashboard de Rendimiento de Agentes: ${aws_cloudwatch_dashboard.agent_performance.dashboard_name}
 
-    To view the dashboards:
-    1. Sign in to AWS Console
-    2. Navigate to CloudWatch → Dashboards
-    3. Select your dashboard from the list
+    Para ver los dashboards:
+    1. Inicia sesión en la consola de AWS
+    2. Navega hasta CloudWatch → Dashboards
+    3. Selecciona tu dashboard de la lista
 
-    Or use these direct links:
-    - AI Model Usage: https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.ai_model_usage.dashboard_name}
-    - Agent Performance: https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.agent_performance.dashboard_name}
+    O utiliza estos enlaces directos:
+    - Uso de Modelos de IA: https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.ai_model_usage.dashboard_name}
+    - Rendimiento de Agentes: https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.agent_performance.dashboard_name}
 
-    Dashboard Features:
+    Características de los dashboards:
 
-    AI Model Usage Dashboard:
-    - Bedrock model invocations and errors
-    - Token usage (input/output) tracking
-    - Model response latency metrics
-    - SageMaker endpoint invocations
-    - SageMaker model latency
-    - Endpoint resource utilization (CPU/Memory)
+    Dashboard de Uso de Modelos de IA:
+    - Invocaciones y errores de modelos Bedrock
+    - Seguimiento del uso de tokens (input/output)
+    - Métricas de latencia de respuesta del modelo
+    - Invocaciones a endpoints SageMaker
+    - Latencia de modelos SageMaker
+    - Utilización de recursos del endpoint (CPU/Memoria)
 
-    Agent Performance Dashboard:
-    - Execution times for each agent
-    - Invocation counts by agent
-    - Error rates monitoring
-    - Total invocations over time
-    - Concurrent execution metrics
-    - Throttle detection
+    Dashboard de Rendimiento de Agentes:
+    - Tiempos de ejecución para cada agente
+    - Conteo de invocaciones por agente
+    - Monitorización de tasas de error
+    - Total de invocaciones en el tiempo
+    - Métricas de ejecución concurrente
+    - Detección de throttling
 
-    Note: Some metrics may take a few minutes to populate after initial deployment.
-    Ensure your Lambda functions have been invoked at least once to see data.
+    Nota: Algunas métricas pueden tardar algunos minutos en aparecer tras el despliegue inicial.
+    Asegúrate de que tus funciones Lambda se han invocado al menos una vez para ver datos.
   EOT
 }

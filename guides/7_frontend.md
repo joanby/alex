@@ -1,25 +1,25 @@
-# Building Alex: Part 7 - Frontend & API
+# Construyendo Alex: Parte 7 - Frontend y API
 
-Welcome to the final development phase! In this guide, you'll deploy the user interface that brings Alex to life - a modern React application with real-time agent visualization, portfolio management, and comprehensive financial analysis displays.
+¡Bienvenido a la fase final de desarrollo! En esta guía, desplegarás la interfaz de usuario que da vida a Alex: una aplicación moderna en React con visualización en tiempo real de agentes, gestión de portafolios y pantallas de análisis financiero completas.
 
-## REMINDER - MAJOR TIP!!
+## ¡RECORDATORIO - CONSEJO IMPORTANTE!
 
-There's a file `gameplan.md` in the project root that describes the entire Alex project to an AI Agent, so that you can ask questions and get help. There's also an identical `CLAUDE.md` and `AGENTS.md` file. If you need help, simply start your favorite AI Agent, and give it this instruction:
+Hay un archivo llamado `gameplan.md` en la raíz del proyecto que describe todo el proyecto Alex a un Agente de IA, para que puedas hacer preguntas y obtener ayuda. También hay un archivo idéntico `CLAUDE.md` y `AGENTS.md`. Si necesitas ayuda, simplemente inicia tu Agente de IA favorito y dale esta instrucción:
 
-> I am a student on the course AI in Production. We are in the course repo. Read the file `gameplan.md` for a briefing on the project. Read this file completely and read all the linked guides carefully. Do not start any work apart from reading and checking directory structure. When you have completed all reading, let me know if you have questions before we get started.
+> Soy estudiante en el curso AI in Production. Estamos en el repositorio del curso. Lee el archivo `gameplan.md` para un resumen del proyecto. Lee este archivo completamente y revisa todas las guías enlazadas cuidadosamente. No comiences ningún trabajo aparte de leer y comprobar la estructura de directorios. Cuando termines de leer, dime si tienes preguntas antes de que empecemos.
 
-After answering questions, say exactly which guide you're on and any issues. Be careful to validate every suggestion; always ask for the root cause and evidence of problems. LLMs have a tendency to jump to conclusions, but they often correct themselves when they need to provide evidence.
+Después de responder preguntas, indica exactamente en qué guía estás y cualquier problema. Sé cuidadoso validando cada sugerencia; siempre pide la causa raíz y evidencia de los problemas. Los LLM tienen tendencia a sacar conclusiones rápidas, pero suelen corregirse cuando se les pide evidencia.
 
-## What You're Building
+## Qué Vas a Construir
 
-You'll deploy a complete SaaS frontend with:
-- **Authentication**: Clerk-based sign-in/sign-up with automatic user creation
-- **Portfolio Management**: Add accounts, track positions, edit holdings
-- **AI Analysis**: Trigger and monitor multi-agent analysis with real-time progress
-- **Interactive Reports**: Markdown reports, dynamic charts, retirement projections
-- **Production Infrastructure**: CloudFront CDN, API Gateway, Lambda backend
+Desplegarás un frontend SaaS completo con:
+- **Autenticación**: Registro/inicio de sesión con Clerk y creación automática de usuario
+- **Gestión de Portafolios**: Añade cuentas, rastrea posiciones, edita tenencias
+- **Análisis IA**: Lanza y monitoriza análisis multi-agente con progreso en tiempo real
+- **Informes Interactivos**: Informes Markdown, gráficos dinámicos, proyecciones de jubilación
+- **Infraestructura de Producción**: CloudFront CDN, API Gateway, backend Lambda
 
-Here's the complete architecture:
+Aquí tienes la arquitectura completa:
 
 ```mermaid
 graph TB
@@ -42,98 +42,98 @@ graph TB
     style Clerk fill:#6C5CE7
 ```
 
-## Prerequisites
+## Requisitos Previos
 
-Before starting, ensure you have:
-- Completed Guides 1-6 (all backend infrastructure deployed)
-- AWS CLI configured
-- Node.js 20+ and npm installed
-- Python with `uv` package manager
-- Terraform installed
-- A Clerk account (free tier is fine)
+Antes de comenzar, asegúrate de tener:
+- Completadas las guías 1-6 (toda la infraestructura backend desplegada)
+- AWS CLI configurado
+- Node.js 20+ y npm instalados
+- Python con gestor de paquetes `uv`
+- Terraform instalado
+- Una cuenta en Clerk (la versión gratuita basta)
 
-## Step 1: Set Up Clerk Authentication
+## Paso 1: Configura la Autenticación con Clerk
 
-We'll use Clerk for authentication - the same service from earlier in the course. If you already have Clerk credentials from a previous project, you can reuse them.
+Usaremos Clerk para la autenticación, el mismo servicio que vimos antes en el curso. Si ya tienes credenciales de Clerk de un proyecto anterior, puedes reutilizarlas.
 
-### 1.1 Get Your Clerk Credentials
+### 1.1 Consigue tus Credenciales de Clerk
 
-If you have Clerk credentials from a previous project:
-1. Sign in to [Clerk Dashboard](https://dashboard.clerk.com)
-2. Select your existing application
-3. Navigate to **API Keys** in the left sidebar
-4. You'll need:
-   - Publishable Key (starts with `pk_`)
-   - Secret Key (starts with `sk_`)
-   - JWKS Endpoint URL (found under **Show JWT Public Key** → **JWKS Endpoint**)
+Si ya tienes credenciales de Clerk:
+1. Ingresa al [Clerk Dashboard](https://dashboard.clerk.com)
+2. Selecciona tu aplicación existente
+3. Ve a **API Keys** en la barra lateral izquierda
+4. Necesitarás:
+   - Publishable Key (empieza con `pk_`)
+   - Secret Key (empieza con `sk_`)
+   - JWKS Endpoint URL (aparece bajo **Show JWT Public Key** → **JWKS Endpoint**)
 
-If you need to create a new Clerk application:
-1. Sign up at [clerk.com](https://clerk.com)
-2. Create a new application
-3. Choose **Email** and optionally **Google** for sign-in methods
-4. Get your keys from the API Keys section
+Si necesitas crear una nueva aplicación Clerk:
+1. Regístrate en [clerk.com](https://clerk.com)
+2. Crea una nueva aplicación
+3. Elige **Email** y opcionalmente **Google** como métodos de inicio de sesión
+4. Obtén tus llaves en la sección API Keys
 
-### 1.2 Configure Frontend Environment
+### 1.2 Configura el Entorno del Frontend
 
-Create `.env.local` in the frontend directory in Cursor and add your Clerk credentials:
+Crea un archivo `.env.local` en el directorio frontend en Cursor y añade tus credenciales de Clerk:
 
 ```bash
-# Clerk Authentication (use your existing keys if you have them)
+# Clerk Authentication (usa tus claves existentes si las tienes)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your-key-here
 CLERK_SECRET_KEY=sk_test_your-secret-here
 
-# Sign-in/up redirects (these are already set correctly)
+# Redirecciones para inicio/registro de sesión (ya están correctas)
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 
-# API URL - use localhost for local development, AWS URL for production
+# API URL - usa localhost para desarrollo local, URL de AWS para producción
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 1.3 Configure Backend Environment
+### 1.3 Configura el Entorno Backend
 
-Now add Clerk configuration to your root `.env` file:
+Ahora añade la configuración de Clerk al archivo `.env` en la raíz:
 
 ```bash
-# In your alex directory root .env file, add:
+# En la raíz del directorio alex, añade a tu archivo .env:
 
-# Part 7 - Clerk Authentication
+# Parte 7 - Autenticación Clerk
 CLERK_JWKS_URL=https://your-app.clerk.accounts.dev/.well-known/jwks.json
 ```
 
-To find your JWKS URL:
-1. Go to Clerk Dashboard → **API Keys**
-2. Click **Show JWT Public Key**
-3. Copy the **JWKS Endpoint** URL
+Para encontrar tu JWKS URL:
+1. Ve al Clerk Dashboard → **API Keys**
+2. Haz clic en **Show JWT Public Key**
+3. Copia la URL de **JWKS Endpoint**
 
-## Step 2: Test Frontend Locally
+## Paso 2: Prueba el Frontend Localmente
 
-Let's verify the frontend works before deploying.
+Vamos a verificar que el frontend funciona antes de desplegar.
 
-### 2.1 Install Dependencies
+### 2.1 Instala las Dependencias
 
-Navigate to the frontend directory and install packages:
+Navega al directorio frontend e instala los paquetes:
 
 ```bash
-# In alex/frontend directory
+# En alex/frontend
 npm install
 ```
 
-This installs React, NextJS, Tailwind CSS, and other dependencies.
+Esto instala React, NextJS, Tailwind CSS y otros paquetes necesarios.
 
-### 2.2 Start Development Servers
+### 2.2 Inicia los Servidores de Desarrollo
 
-We'll run both the backend API and frontend together:
+Vamos a ejecutar el backend API y el frontend juntos:
 
 ```bash
-# Navigate to scripts directory
-# Go to alex/scripts in your terminal
+# Navega al directorio scripts
+# Ve a alex/scripts en tu terminal
 
-# Start both frontend and backend
+# Arranca frontend y backend
 uv run run_local.py
 ```
 
-You should see:
+Deberías ver:
 ```
 🚀 Starting FastAPI backend...
   ✅ Backend running at http://localhost:8000
@@ -143,489 +143,489 @@ You should see:
   ✅ Frontend running at http://localhost:3000
 ```
 
-### 2.3 Explore the Application
+### 2.3 Explora la Aplicación
 
-Open your browser and visit [http://localhost:3000](http://localhost:3000)
+Abre tu navegador y visita [http://localhost:3000](http://localhost:3000)
 
-1. **Landing Page**: You'll see the Alex AI Financial Advisor homepage
-2. **Sign In**: Click "Sign In" and create an account or use existing Clerk credentials
-3. **Dashboard**: After sign-in, you're redirected to the dashboard
-4. **User Creation**: The system automatically creates your user profile in the database
+1. **Página de Inicio**: Verás la portada de Alex, el Asesor Financiero IA
+2. **Iniciar Sesión**: Haz clic en "Sign In", crea una cuenta o usa tus credenciales de Clerk
+3. **Dashboard**: Tras iniciar sesión, serás redirigido al dashboard
+4. **Creación de Usuario**: El sistema crea automáticamente tu perfil de usuario en la base de datos
 
-### 2.4 Explore API Documentation
+### 2.4 Explora la Documentación del API
 
-Open [http://localhost:8000/docs](http://localhost:8000/docs) to see the Swagger API documentation.
+Abre [http://localhost:8000/docs](http://localhost:8000/docs) para ver la documentación interactiva (Swagger).
 
-This interactive documentation shows:
-- All available API endpoints
-- Request/response schemas
-- Authentication requirements
-- Try-it-out functionality (requires JWT token)
+Esta documentación muestra:
+- Todos los endpoints de la API
+- Esquemas de solicitud/respuesta
+- Requisitos de autenticación
+- Función Try-it-out (requiere token JWT)
 
-Key endpoints:
-- `GET /api/user` - Get or create user profile
-- `GET /api/accounts` - List investment accounts
-- `POST /api/positions` - Add positions to accounts
-- `POST /api/analyze` - Trigger AI analysis
-- `GET /api/jobs/{job_id}` - Check analysis status
+Endpoints clave:
+- `GET /api/user` - Obtener o crear perfil de usuario
+- `GET /api/accounts` - Listar cuentas de inversión
+- `POST /api/positions` - Añadir posiciones a cuentas
+- `POST /api/analyze` - Lanzar análisis IA
+- `GET /api/jobs/{job_id}` - Consultar estado del análisis
 
-## Step 3: Add Test Portfolio Data
+## Paso 3: Agrega Datos de Portafolio de Prueba
 
-Let's create a sample portfolio to work with.
+Vamos a crear un portafolio ejemplo para trabajar.
 
-### 3.1 Navigate to Accounts Page
+### 3.1 Navega a la Página de Cuentas
 
-1. Click **Accounts** in the navigation bar
-2. You'll see "No accounts found"
-3. Click **Populate Test Data** button
+1. Haz clic en **Accounts** en la barra de navegación
+2. Verás "No accounts found"
+3. Haz clic en el botón **Populate Test Data**
 
-The system creates:
-- 3 accounts (401k, Roth IRA, Taxable)
-- Various ETF and stock positions
-- Cash balances
+El sistema crea:
+- 3 cuentas (401k, Roth IRA, Taxable)
+- Diversas posiciones en ETFs y acciones
+- Saldos en efectivo
 
-### 3.2 Explore Account Management
+### 3.2 Explora la Gestión de Cuentas
 
-Click on any account to:
-- View positions with current values
-- Edit position quantities
-- Add new positions
-- Delete positions
-- Update cash balance
+Haz clic en cualquier cuenta para:
+- Ver posiciones y valores actuales
+- Editar cantidades
+- Agregar posiciones nuevas
+- Eliminar posiciones
+- Actualizar saldo en efectivo
 
-Try editing a position:
-1. Click the edit icon next to any position
-2. Change the quantity
-3. Click save
-4. See the value update automatically
+Prueba a editar una posición:
+1. Haz clic en el icono de editar junto a una posición
+2. Cambia la cantidad
+3. Haz clic en guardar
+4. Observa cómo se actualiza el valor automáticamente
 
-**Note**: The AI analysis features require the AWS infrastructure to be deployed. You can explore portfolio management locally, but analysis will only work after deployment.
+**Nota**: Las funciones de análisis IA requieren que la infraestructura AWS esté desplegada. Puedes explorar la gestión del portafolio localmente, pero el análisis solo funcionará tras el despliegue.
 
-## Step 4: Deploy Infrastructure
+## Paso 4: Despliega la Infraestructura
 
-Now let's deploy to AWS for production use.
+Ahora vamos a desplegar todo en AWS para uso en producción.
 
-### 4.1 Configure Terraform
+### 4.1 Configura Terraform
 
-Navigate to the terraform directory for Part 7:
+Navega al directorio terraform de la Parte 7:
 
 ```bash
-# Go to alex/terraform/7_frontend directory
+# Ve a alex/terraform/7_frontend
 
-# Copy example variables
+# Copia variables de ejemplo
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` in Cursor:
+Edita `terraform.tfvars` en Cursor:
 
 ```hcl
-# AWS region for deployment
+# Región AWS para el despliegue
 aws_region = "us-east-1"
 
-# Clerk configuration for JWT validation
-# Get these from your Clerk dashboard
-# The JWKS URL is: https://[your-instance].clerk.accounts.dev/.well-known/jwks.json
-# The issuer is: https://[your-instance].clerk.accounts.dev
+# Configuración de Clerk para validación JWT
+# Consigue esto de tu tablero Clerk
+# JWKS URL: https://[tu-instancia].clerk.accounts.dev/.well-known/jwks.json
+# issuer: https://[tu-instancia].clerk.accounts.dev
 clerk_jwks_url = "https://engaging-feline-80.clerk.accounts.dev/.well-known/jwks.json"
 clerk_issuer   = "https://engaging-feline-80.clerk.accounts.dev"
 ```
 
-To find your AWS account ID:
+Para encontrar tu ID de cuenta AWS:
 ```bash
 aws sts get-caller-identity --query Account --output text
 ```
 
-### 4.2 Package the API Lambda
+### 4.2 Empaqueta el API Lambda
 
-Navigate to the backend/api directory and package the Lambda:
+Navega al directorio backend/api y empaqueta la Lambda:
 
 ```bash
-# In alex/backend/api directory
+# En alex/backend/api
 uv run package_docker.py
 ```
 
-This creates `api_lambda.zip` with all dependencies. Takes about 1 minute.
+Esto crea `api_lambda.zip` con todas las dependencias. Tarda unos 1-2 minutos.
 
-### 4.3 Deploy Infrastructure
+### 4.3 Despliega la Infraestructura
 
-Navigate back to the terraform directory and deploy:
+Regresa al directorio terraform y despliega:
 
 ```bash
-# In alex/terraform/7_frontend directory
+# En alex/terraform/7_frontend
 
-# Initialize Terraform
+# Inicializa Terraform
 terraform init
 
-# Review what will be created
+# Revisa lo que se va a crear
 terraform plan
 
-# Deploy infrastructure
+# Despliega la infraestructura
 terraform apply
 ```
 
-Type `yes` when prompted. This creates:
-- S3 bucket for static frontend
-- CloudFront CDN distribution
-- API Gateway with Lambda integration
-- Lambda function for API
-- IAM roles and policies
+Escribe `yes` cuando te lo pida. Esto crea:
+- Bucket S3 para el frontend
+- CloudFront CDN
+- API Gateway con integración Lambda
+- Función Lambda para la API
+- Roles y políticas IAM
 
-Deployment takes 10-15 minutes (CloudFront takes time).
+El despliegue tarda 10-15 minutos (CloudFront toma tiempo).
 
-### 4.4 Save Important Outputs
+### 4.4 Guarda los Resultados Importantes
 
-After deployment, save the outputs:
+Tras desplegar, guarda los outputs:
 
 ```bash
 terraform output
 ```
 
-You'll see:
-- `cloudfront_url` - Your frontend URL
-- `api_gateway_url` - Your API endpoint
-- `s3_bucket` - Frontend bucket name
+Verás:
+- `cloudfront_url` - URL de tu frontend
+- `api_gateway_url` - Endpoint API
+- `s3_bucket` - Nombre del bucket frontend
 
-Also update your root `.env` file with the SQS queue URL from Part 6:
+Actualiza también tu archivo `.env` raíz con la URL de la cola SQS de la Parte 6:
 
 ```bash
-# Check Part 6 outputs if you don't have this
-# In alex/terraform/6_agents directory
+# Consulta los outputs de la parte 6 si no tienes esto
+# En alex/terraform/6_agents
 terraform output sqs_queue_url
 
-# Add to your .env file:
+# Añade a tu archivo .env:
 SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/123456789012/alex-analysis-jobs
 ```
 
-## Step 5: Deploy Frontend Code
+## Paso 5: Despliega el Código del Frontend
 
-Now let's build and deploy the frontend application.
+Ahora vamos a construir y desplegar el frontend.
 
-### 5.1 Build Frontend
+### 5.1 Construye el Frontend
 
-Navigate to the frontend directory:
+Navega al directorio frontend:
 
 ```bash
-# In alex/frontend directory
+# En alex/frontend
 
-# Build production version
+# Construye la versión de producción
 npm run build
 ```
 
-This creates an optimized production build in the `out` directory.
+Esto crea una build optimizada en el directorio `out`.
 
-### 5.2 Deploy to S3
+### 5.2 Despliega a S3
 
-Navigate to the scripts directory and run the deployment:
+Ve al directorio scripts y ejecuta el despliegue:
 
 ```bash
-# In alex/scripts directory
+# En alex/scripts
 
-# Deploy frontend to S3 and invalidate CloudFront cache
+# Sube el frontend a S3 e invalida el caché de CloudFront
 uv run deploy.py
 ```
 
-This script:
-1. Uploads built files to S3
-2. Sets correct content types
-3. Invalidates CloudFront cache
-4. Takes about 2 minutes
+Este script:
+1. Sube los archivos construidos a S3
+2. Establece los content-types correctos
+3. Invalida el caché de CloudFront
+4. Tarda unos 2 minutos
 
-## Step 6: Test Production Deployment
+## Paso 6: Prueba el Despliegue en Producción
 
-### 6.1 Access Your Application
+### 6.1 Accede a tu Aplicación
 
-Open the CloudFront URL from the Terraform output in your browser:
+Abre en tu navegador la URL de CloudFront desde el output de Terraform:
 ```
 https://d1234567890.cloudfront.net
 ```
 
-1. **Sign In**: Use your Clerk credentials
-2. **Dashboard**: Verify it loads correctly
-3. **API Calls**: Check that data loads
+1. **Inicia Sesión**: Usa tus credenciales de Clerk
+2. **Dashboard**: Comprueba que carga bien
+3. **Llamadas API**: Verifica que la información se carga
 
-### 6.2 Test Portfolio Management
+### 6.2 Prueba la Gestión de Portafolios
 
-1. Navigate to **Accounts**
-2. Click **Populate Test Data** if needed
-3. Edit a position to verify updates work
-4. Add a new position
+1. Navega a **Accounts**
+2. Haz clic en **Populate Test Data** si lo necesitas
+3. Edita una posición para verificar las actualizaciones
+4. Añade una nueva posición
 
-## Step 7: Run AI Analysis in Production
+## Paso 7: Ejecuta el Análisis IA en Producción
 
-Now that everything is deployed, let's run the AI analysis!
+¡Ahora que todo está desplegado, vamos a lanzar el análisis IA!
 
-### 7.1 Navigate to Advisor Team
+### 7.1 Navega al Equipo de Asesores
 
-Click **Advisor Team** in the navigation. You'll see four specialist agents:
-- 🎯 **Financial Planner** - Orchestrates the analysis
-- 📊 **Portfolio Analyst** - Analyzes holdings and performance
-- 📈 **Chart Specialist** - Creates visualizations
-- 🎯 **Retirement Planner** - Projects retirement scenarios
+Haz clic en **Advisor Team** en la navegación. Verás cuatro agentes especialistas:
+- 🎯 **Financial Planner** - Orquesta el análisis
+- 📊 **Portfolio Analyst** - Analiza tenencias y desempeño
+- 📈 **Chart Specialist** - Crea visualizaciones
+- 🎯 **Retirement Planner** - Proyecta escenarios de jubilación
 
-Note: The fifth agent (InstrumentTagger) runs invisibly when needed.
+Nota: El quinto agente (InstrumentTagger) funciona invisible cuando es necesario.
 
-### 7.2 Start Analysis
+### 7.2 Lanza el Análisis
 
-1. Click the **Start New Analysis** button (purple, prominent)
-2. Watch the progress visualization:
-   - Financial Planner lights up first
-   - Then three agents work in parallel
-   - Each agent shows a glowing effect when active
-3. Wait 60-90 seconds for completion
-4. Automatically redirects to the Analysis page
+1. Haz clic en el botón **Start New Analysis** (púrpura, destacado)
+2. Observa la visualización del progreso:
+   - Financial Planner se activa primero
+   - Luego los otros tres trabajan en paralelo
+   - Cada agente muestra un efecto de resplandor cuando está activo
+3. Espera 60-90 segundos hasta completarse
+4. Redirige automáticamente a la página de Análisis
 
-### 7.3 Review Analysis Results
+### 7.3 Revisa los Resultados del Análisis
 
-The Analysis page has four tabs:
+La página de Análisis tiene cuatro pestañas:
 
-**Overview Tab**:
-- Executive summary
-- Key observations
-- Risk assessment
-- Recommendations
+**Pestaña Overview**:
+- Resumen ejecutivo
+- Observaciones clave
+- Evaluación de riesgo
+- Recomendaciones
 
-**Charts Tab**:
-- Asset allocation pie chart
-- Geographic exposure
-- Sector breakdown
-- Top holdings
+**Pestaña Charts**:
+- Gráfico de asignación de activos
+- Exposición geográfica
+- Distribución sectorial
+- Principales tenencias
 
-**Retirement Tab**:
-- Monte Carlo simulation results
-- Success probability
-- Portfolio projections
-- Retirement readiness score
+**Pestaña Retirement**:
+- Resultados de simulación Monte Carlo
+- Probabilidad de éxito
+- Proyecciones del portafolio
+- Puntuación de preparación para la jubilación
 
-**Recommendations Tab**:
-- Specific action items
-- Rebalancing suggestions
-- Risk adjustments
+**Pestaña Recommendations**:
+- Acciones concretas
+- Sugerencias de rebalanceo
+- Ajustes de riesgo
 
-## Step 8: Monitor in AWS Console
+## Paso 8: Monitorea desde la Consola de AWS
 
-Let's explore what's happening behind the scenes.
+Vamos a explorar qué sucede bajo el capó.
 
-### 8.1 CloudWatch Logs
+### 8.1 Logs de CloudWatch
 
-1. Go to [CloudWatch Console](https://console.aws.amazon.com/cloudwatch)
-2. Click **Log groups**
-3. Find `/aws/lambda/alex-api`
-4. Click on the latest log stream
-5. You'll see API requests and responses
+1. Ve a [CloudWatch Console](https://console.aws.amazon.com/cloudwatch)
+2. Haz clic en **Log groups**
+3. Busca `/aws/lambda/alex-api`
+4. Haz clic en el último stream de logs
+5. Verás las peticiones y respuestas de la API
 
-### 8.2 API Gateway Metrics
+### 8.2 Métricas de API Gateway
 
-1. Go to [API Gateway Console](https://console.aws.amazon.com/apigateway)
-2. Click on `alex-api`
-3. Click **Dashboard** in the left sidebar
-4. View request counts, latency, and errors
+1. Ve a [API Gateway Console](https://console.aws.amazon.com/apigateway)
+2. Haz clic en `alex-api`
+3. Haz clic en **Dashboard**
+4. Visualiza recuento de peticiones, latencia y errores
 
-### 8.3 Lambda Performance
+### 8.3 Performance de Lambda
 
-1. Go to [Lambda Console](https://console.aws.amazon.com/lambda)
-2. Click on `alex-api`
-3. Click **Monitor** tab
-4. View invocations, duration, and errors
-5. Check concurrent executions
+1. Ve a [Lambda Console](https://console.aws.amazon.com/lambda)
+2. Haz clic en `alex-api`
+3. Haz clic en la pestaña **Monitor**
+4. Visualiza invocaciones, duración y errores
+5. Comprueba ejecuciones concurrentes
 
-### 8.4 SQS Queue Activity
+### 8.4 Actividad de la Cola SQS
 
-When you trigger an analysis:
+Cuando lances un análisis:
 
-1. Go to [SQS Console](https://console.aws.amazon.com/sqs)
-2. Click on `alex-analysis-jobs`
-3. Watch **Messages Available** change
-4. Check **Monitoring** tab for metrics
+1. Ve a [SQS Console](https://console.aws.amazon.com/sqs)
+2. Haz clic en `alex-analysis-jobs`
+3. Observa los **Messages Available** cambiar
+4. Revisa la pestaña **Monitoring** para métricas
 
-### 8.5 CloudFront Distribution
+### 8.5 Distribución de CloudFront
 
-1. Go to [CloudFront Console](https://console.aws.amazon.com/cloudfront)
-2. Click on your distribution
-3. Check **Monitoring** tab for:
-   - Requests per second
-   - Cache hit ratio
-   - Data transfer
-   - Origin requests
+1. Ve a [CloudFront Console](https://console.aws.amazon.com/cloudfront)
+2. Haz clic en tu distribución
+3. Revisa la pestaña **Monitoring** para:
+   - Solicitudes por segundo
+   - Porcentaje de aciertos de caché
+   - Transferencia de datos
+   - Solicitudes al origen
 
-## Step 9: Cost Monitoring
+## Paso 9: Monitoreo de Costos
 
-As a responsible AWS user, always monitor costs:
+Como usuario responsable de AWS, monitoriza siempre los costos:
 
-### 9.1 Check Current Costs
+### 9.1 Consulta Costos Actuales
 
-1. Sign in as your AWS root user
-2. Go to [Billing Dashboard](https://console.aws.amazon.com/billing)
-3. Check **Bills** for current month
-4. Review service breakdown
+1. Ingresa como usuario root de AWS
+2. Ve al [Billing Dashboard](https://console.aws.amazon.com/billing)
+3. Revisa **Bills** del mes actual
+4. Revisa el desglose por servicio
 
-### 9.2 Expected Costs
+### 9.2 Costos Esperados
 
-For this complete application:
-- **Lambda**: < $1/month (pay per invocation)
-- **API Gateway**: < $4/month (1M requests free tier)
-- **Aurora**: $43-60/month (biggest cost)
-- **S3 & CloudFront**: < $1/month for development
-- **SQS**: < $1/month
-- **CloudWatch**: < $5/month
-- **Bedrock**: $0.01-0.10 per analysis
+Para esta aplicación completa:
+- **Lambda**: < $1/mes (pago por invocación)
+- **API Gateway**: < $4/mes (1M solicitudes en free tier)
+- **Aurora**: $43-60/mes (mayor coste)
+- **S3 & CloudFront**: < $1/mes para desarrollo
+- **SQS**: < $1/mes
+- **CloudWatch**: < $5/mes
+- **Bedrock**: $0.01-0.10 por análisis
 
-**Total**: ~$50-70/month during development
+**Total**: ~$50-70/mes durante desarrollo
 
-### 9.3 Cost Optimization
+### 9.3 Optimización de Costos
 
-To reduce costs when not actively developing:
+Para reducir costes cuando no desarrolles:
 
 ```bash
-# Stop Aurora to save ~$43/month
-# In alex/terraform/5_database directory
+# Detén Aurora para ahorrar ~$43/mes
+# En alex/terraform/5_database
 terraform destroy
 
-# Or destroy everything
-# Run in each terraform directory in reverse order (7, 6, 5, 4, 3, 2)
+# O destruye todo
+# Ejecuta en cada directorio terraform en orden inverso (7, 6, 5, 4, 3, 2)
 terraform destroy
 ```
 
-## Troubleshooting
+## Resolución de Problemas
 
-### Frontend Won't Build
+### El Frontend no Construye
 
-If `npm run build` fails:
-1. Check Node.js version (needs 20+)
-2. Delete `node_modules` and `.next` directories
-3. Run `npm install` again
-4. Check for TypeScript errors
+Si `npm run build` falla:
+1. Comprueba la versión de Node.js (necesitas 20+)
+2. Borra `node_modules` y `.next`
+3. Ejecuta `npm install` de nuevo
+4. Revisa si hay errores de TypeScript
 
-### API Returns 401 Unauthorized
+### API Devuelve 401 Unauthorized
 
-If API calls fail with 401:
-1. Verify Clerk keys in `.env.local`
-2. Check JWKS URL in Lambda environment variables
-3. Sign out and sign in again
-4. Check token expiry (Clerk tokens expire after 1 hour)
+Si las llamadas al API fallan con 401:
+1. Verifica las claves de Clerk en `.env.local`
+2. Comprueba la JWKS URL en variables de entorno de Lambda
+3. Cierra sesión y vuelve a ingresar
+4. Verifica expiración de token (los tokens de Clerk expiran a la hora)
 
-### Analysis Doesn't Start
+### El Análisis no Arranca
 
-If analysis stays pending:
-1. Check SQS queue for messages
-2. Verify planner Lambda has SQS trigger
-3. Check CloudWatch logs for errors
-4. Ensure Aurora cluster is running
+Si el análisis queda pendiente:
+1. Revisa la cola SQS buscando mensajes
+2. Comprueba que la Lambda planner tenga el trigger SQS
+3. Consulta los logs de CloudWatch en busca de errores
+4. Asegura que el clúster Aurora está corriendo
 
-### CloudFront Returns 403
+### CloudFront Devuelve 403
 
-If you get access denied:
-1. Check S3 bucket policy
-2. Verify CloudFront OAI has access
-3. Wait 15 minutes for propagation
-4. Try incognito browser window
+Si obtienes acceso denegado:
+1. Revisa la política del bucket S3
+2. Verifica que CloudFront OAI tiene acceso
+3. Espera 15 minutos por propagación
+4. Prueba en ventana de incógnito
 
-### Charts Don't Display
+### Los Gráficos no se Muestran
 
-If charts are blank:
-1. Check browser console for errors
-2. Verify chart data in job results
-3. Check Recharts library loaded
-4. Review charter agent output
+Si los gráficos están en blanco:
+1. Revisa la consola del navegador por errores
+2. Verifica los datos de gráfico en los resultados del análisis
+3. Comprueba que la librería Recharts cargó bien
+4. Revisa el output del agente charter
 
-## Architecture Best Practices
+## Buenas Prácticas de Arquitectura
 
-### Security Highlights
+### Aspectos Clave de Seguridad
 
-The application implements several security best practices:
+La aplicación sigue buenas prácticas de seguridad:
 
-1. **Authentication**: Clerk handles all auth complexity
-2. **JWT Validation**: Every API request validates tokens
-3. **HTTPS Only**: CloudFront enforces SSL
-4. **Input Validation**: Pydantic validates all data
-5. **CORS Protection**: Restricts origins
-6. **Secrets Management**: Uses AWS Secrets Manager
+1. **Autenticación**: Clerk gestiona toda la autenticación
+2. **Validación JWT**: Todas las peticiones API validan el token
+3. **Solo HTTPS**: CloudFront obliga a SSL
+4. **Validación de Entradas**: Pydantic valida todos los datos
+5. **Protección CORS**: Orígenes restringidos
+6. **Gestión de Secretos**: Usa AWS Secrets Manager
 
-### Performance Optimizations
+### Optimizaciones de Rendimiento
 
-1. **CDN Caching**: Static assets cached globally
-2. **Code Splitting**: NextJS automatically splits bundles
-3. **API Response Caching**: CloudFront caches GET requests
-4. **Database Connection Pooling**: Data API handles pooling
-5. **Parallel Agent Execution**: Agents run simultaneously
+1. **Caché CDN**: Archivos estáticos en caché global
+2. **División de Código**: NextJS lo hace automáticamente
+3. **Caché de Respuestas API**: CloudFront cachea los GET
+4. **Pool de Conexiones a DB**: Data API lo gestiona
+5. **Ejecución Paralela de Agentes**: Agentes trabajan simultáneamente
 
-### Scalability Design
+### Diseño para Escalabilidad
 
-The architecture scales automatically:
-- **CloudFront**: Handles millions of requests
-- **API Gateway**: Auto-scales to demand
-- **Lambda**: Concurrent execution up to 1000
-- **Aurora Serverless**: Scales ACUs as needed
-- **SQS**: Manages queue automatically
+La arquitectura escala automáticamente:
+- **CloudFront**: Maneja millones de peticiones
+- **API Gateway**: Auto-escalado según demanda
+- **Lambda**: Hasta 1000 ejecuciones concurrentes
+- **Aurora Serverless**: Escala ACUs según necesidad
+- **SQS**: Gestiona la cola automáticamente
 
-## Next Steps
+## Próximos Pasos
 
-Congratulations! You've deployed a complete AI-powered financial planning application!
+¡Felicidades! ¡Has desplegado una aplicación completa de planificación financiera potenciada por IA!
 
-### Explore Advanced Features
+### Explora Funcionalidades Avanzadas
 
-Try these additional features:
-1. Create multiple accounts with different strategies
-2. Test with international ETFs
-3. Adjust retirement parameters
-4. Export reports (print to PDF)
+Prueba estas funciones adicionales:
+1. Crea varias cuentas con distintas estrategias
+2. Prueba con ETFs internacionales
+3. Ajusta parámetros de jubilación
+4. Exporta informes (imprime a PDF)
 
-### Customize the Application
+### Personaliza la Aplicación
 
-Ideas for enhancement:
-- Add more chart types
-- Implement portfolio rebalancing
-- Add email notifications
-- Create mobile app
-- Integrate with brokerages
+Ideas para mejorar:
+- Añade más tipos de gráficos
+- Implementa rebalanceo de portafolio
+- Añade notificaciones por email
+- Crea una app móvil
+- Integra con brokerages
 
-### Continue Learning
+### Sigue Aprendiendo
 
-Proceed to [Guide 8](8_observability.md) where you'll add:
-- Comprehensive monitoring with CloudWatch
-- Distributed tracing with X-Ray
-- Security scanning
-- Performance optimization
+Continúa con la [Guía 8](8_observability.md) donde añadirás:
+- Monitorización completa con CloudWatch
+- Trazado distribuido con X-Ray
+- Escaneo de seguridad
+- Optimización de rendimiento
 
-## Summary
+## Resumen
 
-In this guide, you successfully:
-- ✅ Set up Clerk authentication
-- ✅ Deployed a React/NextJS frontend
-- ✅ Created a FastAPI backend on Lambda
-- ✅ Configured CloudFront CDN
-- ✅ Tested portfolio management
-- ✅ Ran multi-agent AI analysis
-- ✅ Monitored costs and performance
+En esta guía lograste:
+- ✅ Configurar la autenticación Clerk
+- ✅ Desplegar un frontend React/NextJS
+- ✅ Crear un backend FastAPI sobre Lambda
+- ✅ Configurar CloudFront CDN
+- ✅ Probar la gestión de portafolios
+- ✅ Ejecutar análisis IA multi-agente
+- ✅ Monitorear costes y rendimiento
 
-Your Alex Financial Advisor is now live and ready for users! 🎉
+¡Tu Asesor Financiero Alex ya está en línea y listo para usuarios! 🎉
 
-## Quick Reference
+## Referencia Rápida
 
-### Key URLs
-- **Frontend**: Your CloudFront URL
-- **API Docs**: Your API Gateway URL + `/docs`
+### URLs clave
+- **Frontend**: Tu CloudFront URL
+- **API Docs**: Tu API Gateway URL + `/docs`
 - **Clerk Dashboard**: https://dashboard.clerk.com
 
-### Common Commands
+### Comandos comunes
 ```bash
-# Local development
+# Desarrollo local
 uv run run_local.py
 
-# Deploy frontend
+# Desplegar frontend
 npm run build
 uv run deploy.py
 
-# Check costs
+# Consultar costes
 aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-31 --granularity MONTHLY --metrics "UnblendedCost" --group-by Type=DIMENSION,Key=SERVICE
 
-# View logs
+# Ver logs
 aws logs tail /aws/lambda/alex-api --follow
 ```
 
-### Cost Management
-- Set up billing alerts
-- Review costs weekly
-- Destroy resources when not needed
-- Use AWS Free Tier where possible
+### Gestión de Costos
+- Configura alertas de facturación
+- Consulta costes semanalmente
+- Destruye recursos cuando no los uses
+- Usa Free Tier de AWS cuando sea posible
 
-Excellent work completing the Alex Financial Advisor! 🚀
+¡Excelente trabajo completando el Asesor Financiero Alex! 🚀

@@ -52,14 +52,14 @@ export default function Accounts() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Accounts received from API:', data);
-        // For each account, load positions
+        console.log('Cuentas recibidas desde la API:', data);
+        // Para cada cuenta, cargar posiciones
         const accountsWithPositions = await Promise.all(
           data.map(async (account: Account) => {
-            console.log('Processing account:', account.id, account.account_name);
-            // Skip if account has no ID
+            console.log('Procesando cuenta:', account.id, account.account_name);
+            // Saltar si la cuenta no tiene ID
             if (!account.id) {
-              console.warn('Account missing ID:', account);
+              console.warn('Cuenta sin ID:', account);
               return { ...account, positions: [] };
             }
 
@@ -75,21 +75,21 @@ export default function Accounts() {
               if (positionsResponse.ok) {
                 const data = await positionsResponse.json();
                 const positions = data.positions || [];
-                console.log(`Loaded ${positions.length} positions for account ${account.id}`);
+                console.log(`Cargadas ${positions.length} posiciones para la cuenta ${account.id}`);
                 return { ...account, positions };
               }
             } catch (err) {
-              console.error(`Error loading positions for account ${account.id}:`, err);
+              console.error(`Error al cargar posiciones para la cuenta ${account.id}:`, err);
             }
             return { ...account, positions: [] };
           })
         );
-        console.log('Final accounts with positions:', accountsWithPositions);
+        console.log('Cuentas finales con posiciones:', accountsWithPositions);
         setAccounts(accountsWithPositions);
       }
     } catch (error) {
-      console.error('Error loading accounts:', error);
-      setMessage({ type: 'error', text: 'Failed to load accounts' });
+      console.error('Error cargando cuentas:', error);
+      setMessage({ type: 'error', text: 'No se pudieron cargar las cuentas' });
     } finally {
       setLoading(false);
     }
@@ -99,15 +99,15 @@ export default function Accounts() {
     loadAccounts();
   }, [loadAccounts]);
 
-  // Listen for analysis completion events to refresh data
+  // Escuchar eventos de finalización de análisis para refrescar datos
   useEffect(() => {
     const handleAnalysisCompleted = () => {
-      // Refresh accounts to get updated prices after analysis
-      console.log('Analysis completed - refreshing accounts...');
+      // Refrescar cuentas para obtener precios actualizados tras el análisis
+      console.log('Análisis completado - refrescando cuentas...');
       loadAccounts();
     };
 
-    // Listen for the completion event
+    // Escuchar el evento de finalización
     window.addEventListener('analysis:completed', handleAnalysisCompleted);
 
     return () => {
@@ -132,13 +132,13 @@ export default function Accounts() {
       if (response.ok) {
         const data = await response.json();
         setMessage({ type: 'success', text: data.message });
-        await loadAccounts(); // Reload accounts after population
+        await loadAccounts(); // Recargar cuentas después de poblar datos
       } else {
-        setMessage({ type: 'error', text: 'Failed to populate test data' });
+        setMessage({ type: 'error', text: 'No se pudieron poblar los datos de prueba' });
       }
     } catch (error) {
-      console.error('Error populating test data:', error);
-      setMessage({ type: 'error', text: 'Error populating test data' });
+      console.error('Error al poblar datos de prueba:', error);
+      setMessage({ type: 'error', text: 'Error al poblar datos de prueba' });
     } finally {
       setPopulatingData(false);
     }
@@ -160,16 +160,16 @@ export default function Accounts() {
       if (response.ok) {
         const data = await response.json();
         setMessage({ type: 'success', text: data.message });
-        // Clear accounts immediately after successful reset
+        // Limpiar cuentas inmediatamente después de un reseteo exitoso
         setAccounts([]);
-        // Then reload to confirm empty state
+        // Luego recargar para confirmar estado vacío
         await loadAccounts();
       } else {
-        setMessage({ type: 'error', text: 'Failed to reset accounts' });
+        setMessage({ type: 'error', text: 'No se pudieron reiniciar las cuentas' });
       }
     } catch (error) {
-      console.error('Error resetting accounts:', error);
-      setMessage({ type: 'error', text: 'Error resetting accounts' });
+      console.error('Error al reiniciar cuentas:', error);
+      setMessage({ type: 'error', text: 'Error al reiniciar cuentas' });
     } finally {
       setResettingAccounts(false);
     }
@@ -189,7 +189,7 @@ export default function Accounts() {
 
   const handleAddAccount = async () => {
     if (!newAccount.name.trim()) {
-      setMessage({ type: 'error', text: 'Please enter an account name' });
+      setMessage({ type: 'error', text: 'Por favor ingresa un nombre de cuenta' });
       return;
     }
 
@@ -206,23 +206,23 @@ export default function Accounts() {
         },
         body: JSON.stringify({
           account_name: newAccount.name,
-          account_purpose: newAccount.purpose || 'Investment Account',
+          account_purpose: newAccount.purpose || 'Cuenta de inversión',
           cash_balance: parseFloat(newAccount.cash_balance.replace(/,/g, '')) || 0,
         }),
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Account created successfully' });
+        setMessage({ type: 'success', text: 'Cuenta creada exitosamente' });
         setShowAddModal(false);
         setNewAccount({ name: '', purpose: '', cash_balance: '' });
         await loadAccounts();
       } else {
         const error = await response.json();
-        setMessage({ type: 'error', text: error.detail || 'Failed to create account' });
+        setMessage({ type: 'error', text: error.detail || 'No se pudo crear la cuenta' });
       }
     } catch (error) {
-      console.error('Error creating account:', error);
-      setMessage({ type: 'error', text: 'Error creating account' });
+      console.error('Error al crear cuenta:', error);
+      setMessage({ type: 'error', text: 'Error al crear cuenta' });
     } finally {
       setSavingAccount(false);
     }
@@ -242,23 +242,23 @@ export default function Accounts() {
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Account deleted successfully' });
+        setMessage({ type: 'success', text: 'Cuenta eliminada exitosamente' });
         await loadAccounts();
       } else {
-        setMessage({ type: 'error', text: 'Failed to delete account' });
+        setMessage({ type: 'error', text: 'No se pudo eliminar la cuenta' });
       }
     } catch (error) {
-      console.error('Error deleting account:', error);
-      setMessage({ type: 'error', text: 'Error deleting account' });
+      console.error('Error eliminando la cuenta:', error);
+      setMessage({ type: 'error', text: 'Error eliminando la cuenta' });
     } finally {
       setDeletingAccountId(null);
     }
   };
 
   const formatCurrencyInput = (value: string) => {
-    // Remove non-numeric characters except decimal
+    // Eliminar caracteres no numéricos excepto decimal
     const cleaned = value.replace(/[^0-9.]/g, '');
-    // Format with commas
+    // Formatear con comas
     const parts = cleaned.split('.');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return parts.join('.');
@@ -267,15 +267,15 @@ export default function Accounts() {
   return (
     <>
       <Head>
-        <title>Accounts - Alex AI Financial Advisor</title>
+        <title>Cuentas - Alex AI Financial Advisor</title>
       </Head>
       <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-dark">Investment Accounts</h2>
-              <p className="text-sm text-gray-600 mt-1">Manage your investment accounts and portfolios</p>
+              <h2 className="text-2xl font-bold text-dark">Cuentas de Inversión</h2>
+              <p className="text-sm text-gray-600 mt-1">Administra tus cuentas y portafolios de inversión</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -285,7 +285,7 @@ export default function Accounts() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Account
+                Añadir Cuenta
               </button>
               {accounts.length === 0 && !loading && (
                 <button
@@ -293,7 +293,7 @@ export default function Accounts() {
                   disabled={populatingData}
                   className="bg-accent hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {populatingData ? 'Populating...' : 'Populate Test Data'}
+                  {populatingData ? 'Poblando...' : 'Poblar Datos de Prueba'}
                 </button>
               )}
               {accounts.length > 0 && (
@@ -302,7 +302,7 @@ export default function Accounts() {
                   disabled={resettingAccounts}
                   className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {resettingAccounts ? 'Resetting...' : 'Reset All'}
+                  {resettingAccounts ? 'Reiniciando...' : 'Reiniciar Todas'}
                 </button>
               )}
             </div>
@@ -323,29 +323,29 @@ export default function Accounts() {
           ) : accounts.length === 0 ? (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 text-center">
               <p className="text-primary font-semibold mb-2">
-                No accounts found
+                No se encontraron cuentas
               </p>
               <p className="text-sm text-gray-600">
-                Click the &quot;Populate Test Data&quot; button above to create sample accounts with positions
+                Haz clic en el botón &quot;Poblar Datos de Prueba&quot; de arriba para crear cuentas de muestra con posiciones
               </p>
             </div>
           ) : (
             <>
-              {/* Portfolio Summary */}
+              {/* Resumen del Portafolio */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Total Portfolio Value</p>
+                    <p className="text-sm text-gray-600">Valor Total del Portafolio</p>
                     <p className="text-2xl font-bold text-primary">
                       ${calculatePortfolioTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Number of Accounts</p>
+                    <p className="text-sm text-gray-600">Cantidad de Cuentas</p>
                     <p className="text-2xl font-bold text-dark">{accounts.length}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Total Positions</p>
+                    <p className="text-sm text-gray-600">Total de Posiciones</p>
                     <p className="text-2xl font-bold text-dark">
                       {accounts.reduce((sum, acc) => sum + (acc.positions?.length || 0), 0)}
                     </p>
@@ -353,17 +353,17 @@ export default function Accounts() {
                 </div>
               </div>
 
-              {/* Accounts Table */}
+              {/* Tabla de cuentas */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Account Name</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">Type</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Positions</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Cash</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Total Value</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Actions</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Nombre de Cuenta</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">Tipo</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Posiciones</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Efectivo</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Valor Total</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -403,7 +403,7 @@ export default function Accounts() {
                               <button
                                 onClick={() => router.push(`/accounts/${account.id}`)}
                                 className="text-primary hover:bg-primary/10 p-2 rounded transition-colors"
-                                title="View/Edit"
+                                title="Ver/Editar"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -418,7 +418,7 @@ export default function Accounts() {
                                 })}
                                 disabled={deletingAccountId === account.id}
                                 className="text-red-600 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
-                                title="Delete"
+                                title="Eliminar"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -436,42 +436,42 @@ export default function Accounts() {
           )}
         </div>
 
-        {/* Add Account Modal */}
+        {/* Modal para Añadir Cuenta */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <h3 className="text-xl font-bold text-dark mb-4">Add New Account</h3>
+              <h3 className="text-xl font-bold text-dark mb-4">Añadir Nueva Cuenta</h3>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Name *
+                    Nombre de Cuenta *
                   </label>
                   <input
                     type="text"
                     value={newAccount.name}
                     onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="e.g., 401k, Roth IRA, Brokerage"
+                    placeholder="ej: 401k, Roth IRA, Corretaje"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Purpose
+                    Propósito de la Cuenta
                   </label>
                   <input
                     type="text"
                     value={newAccount.purpose}
                     onChange={(e) => setNewAccount({ ...newAccount, purpose: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="e.g., Long-term Growth, Retirement"
+                    placeholder="ej: Crecimiento a largo plazo, Retiro"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Initial Cash Balance
+                    Saldo Inicial en Efectivo
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -498,7 +498,7 @@ export default function Accounts() {
                   disabled={savingAccount}
                   className="flex-1 bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {savingAccount ? 'Creating...' : 'Create Account'}
+                  {savingAccount ? 'Creando...' : 'Crear Cuenta'}
                 </button>
                 <button
                   onClick={() => {
@@ -508,39 +508,39 @@ export default function Accounts() {
                   }}
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Confirmation Modal */}
+        {/* Modal de Confirmación */}
         <ConfirmModal
           isOpen={confirmModal.isOpen}
-          title={confirmModal.type === 'reset' ? 'Reset All Accounts' : 'Delete Account'}
+          title={confirmModal.type === 'reset' ? 'Reiniciar Todas las Cuentas' : 'Eliminar Cuenta'}
           message={
             confirmModal.type === 'reset' ? (
               <div>
-                <p className="font-semibold mb-2">Are you sure you want to delete all your accounts?</p>
-                <p className="text-sm">This will permanently remove:</p>
+                <p className="font-semibold mb-2">¿Estás seguro de que deseas eliminar todas tus cuentas?</p>
+                <p className="text-sm">Esto eliminará permanentemente:</p>
                 <ul className="list-disc list-inside text-sm mt-1 ml-2">
-                  <li>All {accounts.length} account{accounts.length !== 1 ? 's' : ''}</li>
-                  <li>All positions in those accounts</li>
-                  <li>All transaction history</li>
+                  <li>Todas las {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}</li>
+                  <li>Todas las posiciones en esas cuentas</li>
+                  <li>Todo el historial de transacciones</li>
                 </ul>
-                <p className="text-sm mt-3 text-red-600 font-semibold">This action cannot be undone.</p>
+                <p className="text-sm mt-3 text-red-600 font-semibold">Esta acción no se puede deshacer.</p>
               </div>
             ) : (
               <div>
-                <p>Are you sure you want to delete <span className="font-semibold">&ldquo;{confirmModal.accountName}&rdquo;</span>?</p>
-                <p className="text-sm mt-2">This will also delete all positions in this account.</p>
-                <p className="text-sm mt-2 text-red-600 font-semibold">This action cannot be undone.</p>
+                <p>¿Estás seguro de que deseas eliminar <span className="font-semibold">&ldquo;{confirmModal.accountName}&rdquo;</span>?</p>
+                <p className="text-sm mt-2">Esto también eliminará todas las posiciones en esta cuenta.</p>
+                <p className="text-sm mt-2 text-red-600 font-semibold">Esta acción no se puede deshacer.</p>
               </div>
             )
           }
-          confirmText={confirmModal.type === 'reset' ? 'Delete All Accounts' : 'Delete Account'}
-          cancelText="Cancel"
+          confirmText={confirmModal.type === 'reset' ? 'Eliminar Todas las Cuentas' : 'Eliminar Cuenta'}
+          cancelText="Cancelar"
           confirmButtonClass="bg-red-600 hover:bg-red-700"
           onConfirm={() => {
             if (confirmModal.type === 'reset') {

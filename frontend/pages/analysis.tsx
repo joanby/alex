@@ -23,7 +23,7 @@ interface Job {
     generated_at: string;
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  charts_payload?: Record<string, any> | null;  // Charter stores charts with dynamic keys
+  charts_payload?: Record<string, any> | null;  // Charter almacena los gráficos con claves dinámicas
   retirement_payload?: {
     agent: string;
     analysis: string;
@@ -41,18 +41,18 @@ interface JobListItem {
 
 type TabType = 'overview' | 'charts' | 'retirement';
 
-// Color palette for charts
+// Paleta de colores para los gráficos
 const COLORS = [
-  '#209DD7', // primary
-  '#753991', // AI accent
-  '#FFB707', // accent
-  '#062147', // dark
-  '#60A5FA', // light blue
-  '#A78BFA', // light purple
-  '#FBBF24', // yellow
-  '#34D399', // green
-  '#F87171', // red
-  '#94A3B8', // gray
+  '#209DD7', // primario
+  '#753991', // acento AI
+  '#FFB707', // acento
+  '#062147', // oscuro
+  '#60A5FA', // azul claro
+  '#A78BFA', // morado claro
+  '#FBBF24', // amarillo
+  '#34D399', // verde
+  '#F87171', // rojo
+  '#94A3B8', // gris
 ];
 
 export default function Analysis() {
@@ -78,10 +78,10 @@ export default function Analysis() {
           const jobData = await response.json();
           setJob(jobData);
         } else {
-          console.error('Failed to fetch job');
+          console.error('No se pudo obtener el análisis');
         }
       } catch (error) {
-        console.error('Error fetching job:', error);
+        console.error('Error al obtener el análisis:', error);
       } finally {
         setLoading(false);
       }
@@ -91,7 +91,7 @@ export default function Analysis() {
       setFetchingLatest(true);
       try {
         const token = await getToken();
-        // First, get the list of jobs to find the latest completed one
+        // Primero, obtenemos la lista de análisis para encontrar el último completado
         const response = await fetch(`${API_URL}/api/jobs`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -101,15 +101,15 @@ export default function Analysis() {
         if (response.ok) {
           const data = await response.json();
           const jobs: JobListItem[] = data.jobs || [];
-          // Find the latest completed job
+          // Encontrar el último análisis completado
           const latestCompletedJob = jobs
             .filter(j => j.status === 'completed')
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
           if (latestCompletedJob) {
-            // Load the full job details
+            // Cargar los detalles completos del análisis
             await loadJob(latestCompletedJob.id);
-            // Update the URL to include the job_id without causing a page reload
+            // Actualizar la URL para incluir el job_id sin recargar la página
             router.replace(`/analysis?job_id=${latestCompletedJob.id}`, undefined, { shallow: true });
           } else {
             setLoading(false);
@@ -118,7 +118,7 @@ export default function Analysis() {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error fetching latest job:', error);
+        console.error('Error al obtener el último análisis:', error);
         setLoading(false);
       } finally {
         setFetchingLatest(false);
@@ -128,14 +128,14 @@ export default function Analysis() {
     if (job_id) {
       loadJob(job_id as string);
     } else if (router.isReady) {
-      // Router is ready but no job_id provided - fetch the latest analysis
+      // El router está listo pero no se proporcionó job_id - obtener el último análisis
       loadLatestJob();
     }
   }, [job_id, router.isReady, getToken, router]);
 
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return new Date(dateString).toLocaleString('es-ES', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -168,19 +168,19 @@ export default function Analysis() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-lg shadow px-8 py-12 text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {fetchingLatest ? 'Loading Latest Analysis...' : 'No Analysis Available'}
+                {fetchingLatest ? 'Cargando el último análisis...' : 'Ningún análisis disponible'}
               </h2>
               <p className="text-gray-600 mb-6">
                 {fetchingLatest
-                  ? 'Please wait while we load your latest analysis.'
-                  : 'You have not completed any analyses yet. Start a new analysis to see results here.'}
+                  ? 'Por favor espera mientras cargamos tu último análisis.'
+                  : 'Aún no has completado ningún análisis. Realiza un nuevo análisis para ver los resultados aquí.'}
               </p>
               {!fetchingLatest && (
                 <button
                   onClick={() => router.push('/advisor-team')}
                   className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 font-semibold"
                 >
-                  Start New Analysis
+                  Realizar nuevo análisis
                 </button>
               )}
             </div>
@@ -196,8 +196,8 @@ export default function Analysis() {
         <div className="min-h-screen bg-gray-50 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-lg shadow px-8 py-12 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Analysis In Progress</h2>
-              <p className="text-gray-600 mb-6">Your analysis is still being processed. Please check back in a few moments.</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Análisis en progreso</h2>
+              <p className="text-gray-600 mb-6">Tu análisis aún se está procesando. Por favor revisa de nuevo en unos minutos.</p>
               <div className="flex justify-center space-x-2 mb-6">
                 <div className="w-3 h-3 bg-ai-accent rounded-full animate-pulse"></div>
                 <div className="w-3 h-3 bg-ai-accent rounded-full animate-pulse delay-75"></div>
@@ -207,7 +207,7 @@ export default function Analysis() {
                 onClick={() => window.location.reload()}
                 className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 font-semibold"
               >
-                Refresh
+                Refrescar
               </button>
             </div>
           </div>
@@ -222,8 +222,8 @@ export default function Analysis() {
         <div className="min-h-screen bg-gray-50 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-lg shadow px-8 py-12">
-              <h2 className="text-2xl font-bold text-red-600 mb-4">Analysis Failed</h2>
-              <p className="text-gray-600 mb-4">The analysis encountered an error and could not be completed.</p>
+              <h2 className="text-2xl font-bold text-red-600 mb-4">El análisis ha fallado</h2>
+              <p className="text-gray-600 mb-4">El análisis encontró un error y no pudo completarse.</p>
               {job.error_message && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                   <p className="text-sm text-red-800">{job.error_message}</p>
@@ -233,7 +233,7 @@ export default function Analysis() {
                 onClick={() => router.push('/advisor-team')}
                 className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-600 font-semibold"
               >
-                Try Another Analysis
+                Probar otro análisis
               </button>
             </div>
           </div>
@@ -243,13 +243,13 @@ export default function Analysis() {
   }
 
 
-  // Tab content renderers
+  // Renderizadores de contenido de pestañas
   const renderOverview = () => {
     const report = job?.report_payload?.content;
     if (!report) {
       return (
         <div className="text-center py-12 text-gray-500">
-          No portfolio report available.
+          No hay informe de portafolio disponible.
         </div>
       );
     }
@@ -293,12 +293,12 @@ export default function Analysis() {
     if (!chartsPayload || Object.keys(chartsPayload).length === 0) {
       return (
         <div className="text-center py-12 text-gray-500">
-          No chart data available.
+          No hay datos de gráficos disponibles.
         </div>
       );
     }
 
-    // Helper function to format chart title from key
+    // Función auxiliar para formatear títulos de los gráficos desde la clave
     const formatTitle = (key: string): string => {
       return key
         .split('_')
@@ -306,16 +306,16 @@ export default function Analysis() {
         .join(' ');
     };
 
-    // Helper function to determine chart type based on data structure or chart metadata
+    // Función auxiliar para determinar el tipo de gráfico basándose en la estructura de datos o metadatos
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getChartType = (chartData: any): 'pie' | 'donut' | 'bar' | 'horizontalBar' | 'line' => {
-      // If the charter agent specifies a type, use it directly if supported
+      // Si el agente charter especifica un tipo, usarlo directamente si se soporta
       if (chartData.type) {
         const supportedTypes = ['pie', 'donut', 'bar', 'horizontalBar', 'line'];
         if (supportedTypes.includes(chartData.type)) {
           return chartData.type;
         }
-        // Map variations to supported types
+        // Mapear variaciones a tipos soportados
         const typeMap: Record<string, 'pie' | 'donut' | 'bar' | 'horizontalBar' | 'line'> = {
           'column': 'bar',
           'area': 'line'
@@ -325,25 +325,24 @@ export default function Analysis() {
         }
       }
 
-      // Otherwise, make an intelligent guess based on the data
-      // If data has dates/time series, use line chart
+      // Si los datos tienen fechas/series temporales, usar gráfico de líneas
       if (chartData.data?.[0]?.date || chartData.data?.[0]?.year) return 'line';
 
-      // If data represents parts of a whole (has percentages or small dataset), use pie
+      // Si los datos representan partes de un todo (tienen porcentajes o conjunto pequeño), usar pie
       if (chartData.data?.length <= 10 && chartData.data?.[0]?.value) return 'pie';
 
-      // Default to bar chart for other cases
+      // Por defecto, usar gráfico de barras para otros casos
       return 'bar';
     };
 
-    // Dynamically render all charts provided by the charter agent
+    // Generar dinámicamente todos los gráficos proporcionados por el agente charter
     const chartEntries = Object.entries(chartsPayload);
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {chartEntries.map(([key, chartData]: [string, any]) => {
-          // Skip if no data
+          // Omitir si no hay datos
           if (!chartData?.data || chartData.data.length === 0) return null;
 
           const chartType = getChartType(chartData);
@@ -362,7 +361,7 @@ export default function Analysis() {
                       labelLine={false}
                       label
                       outerRadius={100}
-                      innerRadius={chartType === 'donut' ? 60 : 0}  // Donut has inner radius
+                      innerRadius={chartType === 'donut' ? 60 : 0}  // El donut tiene inner radius
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -371,11 +370,11 @@ export default function Analysis() {
                         <Cell key={`cell-${idx}`} fill={entry.color || COLORS[idx % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('en-US')}`} />
+                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('es-ES')}`} />
                   </PieChart>
                 ) : chartType === 'horizontalBar' ? (
-                  // For horizontal bars, just use regular vertical bars with rotated labels
-                  // Recharts horizontal layout can be problematic
+                  // Para las barras horizontales, utilizamos barras verticales normales con etiquetas rotadas
+                  // El layout horizontal de recharts puede ser problemático
                   <BarChart
                     data={chartData.data}
                     margin={{ left: 10, right: 30, top: 5, bottom: 60 }}
@@ -391,7 +390,7 @@ export default function Analysis() {
                     <YAxis
                       tickFormatter={(value) => `$${(value/1000).toFixed(0)}k`}
                     />
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('en-US')}`} />
+                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('es-ES')}`} />
                     <Bar dataKey="value">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {chartData.data?.map((entry: any, index: number) => (
@@ -404,22 +403,22 @@ export default function Analysis() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                     <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('en-US')}`} />
+                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('es-ES')}`} />
                     <Bar dataKey="value" fill={chartData.color || COLORS[0]} />
                   </BarChart>
                 ) : (
-                  // Line chart for time series data
+                  // Gráfico de líneas para datos temporales
                   <LineChart data={chartData.data}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey={chartData.xKey || "year"} />
                     <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('en-US')}`} />
+                    <Tooltip formatter={(value: number) => `$${value.toLocaleString('es-ES')}`} />
                     <Line type="monotone" dataKey="value" stroke={COLORS[0]} strokeWidth={2} />
                   </LineChart>
                 )}
               </ResponsiveContainer>
 
-              {/* Add legend for pie/donut charts with many items */}
+              {/* Agregar leyenda para gráficos pie/donut con muchos elementos */}
               {(chartType === 'pie' || chartType === 'donut') && chartData.data.length > 6 && (
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -446,17 +445,17 @@ export default function Analysis() {
     if (!retirement) {
       return (
         <div className="text-center py-12 text-gray-500">
-          No retirement projection available.
+          No hay proyección de jubilación disponible.
         </div>
       );
     }
 
-    // Backend provides 'analysis' as markdown text
+    // El backend proporciona 'analysis' como texto markdown
     const retirementAnalysis = retirement.analysis;
 
     return (
       <div className="space-y-8">
-        {/* Analysis Section */}
+        {/* Sección de análisis */}
         {retirementAnalysis && (
           <div className="bg-ai-accent/10 border border-ai-accent/20 rounded-lg p-6">
             <div className="prose prose-lg max-w-none">
@@ -484,30 +483,30 @@ export default function Analysis() {
   return (
     <>
       <Head>
-        <title>Analysis - Alex AI Financial Advisor</title>
+        <title>Análisis - Alex AI Asesor Financiero</title>
       </Head>
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
+          {/* Encabezado */}
           <div className="bg-white rounded-lg shadow px-8 py-6 mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-dark mb-2">Portfolio Analysis Results</h1>
+                <h1 className="text-3xl font-bold text-dark mb-2">Resultados del análisis de portafolio</h1>
                 <p className="text-gray-600">
-                  Completed on {formatDate(job.created_at)}
+                  Completado el {formatDate(job.created_at)}
                 </p>
               </div>
               <button
                 onClick={() => router.push('/advisor-team')}
                 className="px-6 py-3 bg-ai-accent text-white rounded-lg hover:bg-purple-700 font-semibold"
               >
-                New Analysis
+                Nuevo análisis
               </button>
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Pestañas */}
           <div className="bg-white rounded-lg shadow mb-8">
             <div className="border-b border-gray-200">
               <nav className="flex -mb-px">
@@ -519,7 +518,7 @@ export default function Analysis() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  📊 Overview
+                  📊 Resumen
                 </button>
                 <button
                   onClick={() => setActiveTab('charts')}
@@ -529,7 +528,7 @@ export default function Analysis() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  📈 Charts
+                  📈 Gráficos
                 </button>
                 <button
                   onClick={() => setActiveTab('retirement')}
@@ -539,13 +538,13 @@ export default function Analysis() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  🎯 Retirement Projection
+                  🎯 Proyección de Jubilación
                 </button>
               </nav>
             </div>
           </div>
 
-          {/* Tab Content */}
+          {/* Contenido de pestañas */}
           <div className="bg-white rounded-lg shadow px-8 py-6">
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'charts' && renderCharts()}

@@ -1,57 +1,57 @@
 output "cloudfront_url" {
-  description = "CloudFront distribution URL"
+  description = "URL de la distribución de CloudFront"
   value       = "https://${aws_cloudfront_distribution.main.domain_name}"
 }
 
 output "api_gateway_url" {
-  description = "API Gateway URL"
+  description = "URL de API Gateway"
   value       = aws_apigatewayv2_api.main.api_endpoint
 }
 
 output "s3_bucket_name" {
-  description = "Name of the S3 bucket for frontend"
+  description = "Nombre del bucket S3 para el frontend"
   value       = aws_s3_bucket.frontend.id
 }
 
 output "lambda_function_name" {
-  description = "Name of the API Lambda function"
+  description = "Nombre de la función Lambda de la API"
   value       = aws_lambda_function.api.function_name
 }
 
 output "setup_instructions" {
-  description = "Instructions for completing the deployment"
+  description = "Instrucciones para completar el despliegue"
   value = <<-EOT
 
-    ✅ Frontend & API infrastructure deployed successfully!
+    ✅ ¡Infraestructura de Frontend & API desplegada correctamente!
 
-    CloudFront URL: https://${aws_cloudfront_distribution.main.domain_name}
+    URL de CloudFront: https://${aws_cloudfront_distribution.main.domain_name}
     API Gateway: ${aws_apigatewayv2_api.main.api_endpoint}
     S3 Bucket: ${aws_s3_bucket.frontend.id}
     Lambda Function: ${aws_lambda_function.api.function_name}
 
-    Next steps:
+    Siguientes pasos:
 
-    1. If you deployed manually (not using scripts/deploy.py):
-       a. Build and deploy the frontend:
+    1. Si desplegaste manualmente (no usando scripts/deploy.py):
+       a. Genera y sube el frontend:
           cd frontend
           npm run build
           aws s3 sync out/ s3://${aws_s3_bucket.frontend.id}/ --delete
 
-       b. Invalidate CloudFront cache:
+       b. Invalida la caché de CloudFront:
           aws cloudfront create-invalidation \
             --distribution-id ${aws_cloudfront_distribution.main.id} \
             --paths "/*"
 
-    2. Test the deployment:
-       - Visit: https://${aws_cloudfront_distribution.main.domain_name}
-       - Sign in with Clerk
-       - Check API calls in Network tab
+    2. Prueba el despliegue:
+       - Visita: https://${aws_cloudfront_distribution.main.domain_name}
+       - Inicia sesión con Clerk
+       - Revisa las llamadas API en la pestaña Network
 
-    3. Monitor in AWS Console:
-       - CloudWatch Logs: /aws/lambda/${aws_lambda_function.api.function_name}
-       - API Gateway metrics
-       - CloudFront metrics
+    3. Monitorea en la consola AWS:
+       - Logs de CloudWatch: /aws/lambda/${aws_lambda_function.api.function_name}
+       - Métricas de API Gateway
+       - Métricas de CloudFront
 
-    To destroy: cd scripts && uv run destroy.py
+    Para destruir: cd scripts && uv run destroy.py
   EOT
 }

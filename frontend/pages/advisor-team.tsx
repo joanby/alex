@@ -34,7 +34,7 @@ const agents: Agent[] = [
     icon: '🎯',
     name: 'Financial Planner',
     role: 'Orchestrator',
-    description: 'Coordinates your financial analysis',
+    description: 'Coordina tu análisis financiero',
     color: 'text-ai-accent',
     bgColor: 'bg-ai-accent'
   },
@@ -42,7 +42,7 @@ const agents: Agent[] = [
     icon: '📊',
     name: 'Portfolio Analyst',
     role: 'Reporter',
-    description: 'Analyzes your holdings and performance',
+    description: 'Analiza tus activos y desempeño',
     color: 'text-primary',
     bgColor: 'bg-primary'
   },
@@ -50,7 +50,7 @@ const agents: Agent[] = [
     icon: '📈',
     name: 'Chart Specialist',
     role: 'Charter',
-    description: 'Visualizes your portfolio composition',
+    description: 'Visualiza la composición de tu portafolio',
     color: 'text-green-600',
     bgColor: 'bg-green-600'
   },
@@ -58,7 +58,7 @@ const agents: Agent[] = [
     icon: '🎯',
     name: 'Retirement Planner',
     role: 'Retirement',
-    description: 'Projects your retirement readiness',
+    description: 'Proyecta tu preparación para la jubilación',
     color: 'text-accent',
     bgColor: 'bg-accent'
   }
@@ -98,7 +98,7 @@ export default function AdvisorTeam() {
           if (job.status === 'completed') {
             setProgress({
               stage: 'complete',
-              message: 'Analysis complete!',
+              message: '¡Análisis completado!',
               activeAgents: []
             });
 
@@ -107,10 +107,10 @@ export default function AdvisorTeam() {
               setPollInterval(null);
             }
 
-            // Emit completion event so other components can refresh
+            // Emitir evento de finalización para que otros componentes puedan refrescarse
             emitAnalysisCompleted(jobId);
 
-            // Also refresh our own jobs list
+            // También actualizar nuestra propia lista de análisis
             fetchJobs();
 
             setTimeout(() => {
@@ -119,9 +119,9 @@ export default function AdvisorTeam() {
           } else if (job.status === 'failed') {
             setProgress({
               stage: 'error',
-              message: 'Analysis failed',
+              message: 'El análisis ha fallado',
               activeAgents: [],
-              error: job.error || 'Analysis encountered an error'
+              error: job.error || 'El análisis ha encontrado un error'
             });
 
             if (pollInterval) {
@@ -129,7 +129,7 @@ export default function AdvisorTeam() {
               setPollInterval(null);
             }
 
-            // Emit failure event
+            // Emitir evento de fallo
             emitAnalysisFailed(jobId, job.error);
 
             setIsAnalyzing(false);
@@ -137,7 +137,7 @@ export default function AdvisorTeam() {
           }
         }
       } catch (error) {
-        console.error('Error checking job status:', error);
+        console.error('Error comprobando el estado del análisis:', error);
       }
     };
 
@@ -171,7 +171,7 @@ export default function AdvisorTeam() {
         setJobs(data.jobs || []);
       }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error obteniendo los análisis:', error);
     }
   };
 
@@ -179,7 +179,7 @@ export default function AdvisorTeam() {
     setIsAnalyzing(true);
     setProgress({
       stage: 'starting',
-      message: 'Initializing analysis...',
+      message: 'Inicializando el análisis...',
       activeAgents: []
     });
 
@@ -201,32 +201,32 @@ export default function AdvisorTeam() {
         const data = await response.json();
         setCurrentJobId(data.job_id);
 
-        // Emit start event
+        // Emitir evento de inicio
         emitAnalysisStarted(data.job_id);
 
         setProgress({
           stage: 'planner',
-          message: 'Financial Planner coordinating analysis...',
+          message: 'Financial Planner coordinando el análisis...',
           activeAgents: ['Financial Planner']
         });
 
         setTimeout(() => {
           setProgress({
             stage: 'parallel',
-            message: 'Agents working in parallel...',
+            message: 'Agentes trabajando en paralelo...',
             activeAgents: ['Portfolio Analyst', 'Chart Specialist', 'Retirement Planner']
           });
         }, 5000);
       } else {
-        throw new Error('Failed to start analysis');
+        throw new Error('No se pudo iniciar el análisis');
       }
     } catch (error) {
-      console.error('Error starting analysis:', error);
+      console.error('Error al iniciar el análisis:', error);
       setProgress({
         stage: 'error',
-        message: 'Failed to start analysis',
+        message: 'No se pudo iniciar el análisis',
         activeAgents: [],
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Error desconocido'
       });
       setIsAnalyzing(false);
       setCurrentJobId(null);
@@ -235,7 +235,7 @@ export default function AdvisorTeam() {
 
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return new Date(dateString).toLocaleString('es-ES', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -264,15 +264,15 @@ export default function AdvisorTeam() {
   return (
     <>
       <Head>
-        <title>Advisor Team - Alex AI Financial Advisor</title>
+        <title>Equipo Asesor - Alex AI Asesor Financiero</title>
       </Head>
       <Layout>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-lg shadow px-8 py-6 mb-8">
-            <h1 className="text-3xl font-bold text-dark mb-2">Your AI Advisory Team</h1>
+            <h1 className="text-3xl font-bold text-dark mb-2">Tu equipo asesor de IA</h1>
             <p className="text-gray-600">
-              Meet your team of specialized AI agents that work together to provide comprehensive financial analysis.
+              Conoce a tu equipo de agentes de IA especializados que trabajan juntos para ofrecerte un análisis financiero integral.
             </p>
           </div>
 
@@ -297,7 +297,7 @@ export default function AdvisorTeam() {
                   {isAgentActive(agent.name) && (
                     <div className={`mt-4 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white ${agent.bgColor} animate-strong-pulse`}>
                       <span className="mr-2">●</span>
-                      Active
+                      Activo
                     </div>
                   )}
                 </div>
@@ -307,7 +307,7 @@ export default function AdvisorTeam() {
 
           <div className="bg-white rounded-lg shadow px-8 py-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-dark">Analysis Center</h2>
+              <h2 className="text-2xl font-semibold text-dark">Centro de Análisis</h2>
               <button
                 onClick={startAnalysis}
                 disabled={isAnalyzing}
@@ -317,14 +317,14 @@ export default function AdvisorTeam() {
                     : 'bg-ai-accent hover:bg-purple-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                 }`}
               >
-                {isAnalyzing ? 'Analysis in Progress...' : 'Start New Analysis'}
+                {isAnalyzing ? 'Análisis en progreso...' : 'Iniciar nuevo análisis'}
               </button>
             </div>
 
             {isAnalyzing && (
               <div className="mb-8 p-6 bg-gradient-to-r from-ai-accent/10 to-primary/10 rounded-lg border border-ai-accent/20">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-dark">Analysis Progress</h3>
+                  <h3 className="text-lg font-semibold text-dark">Progreso del análisis</h3>
                   {progress.stage !== 'error' && progress.stage !== 'complete' && (
                     <div className="flex space-x-2">
                       <div className="w-3 h-3 bg-ai-accent rounded-full animate-strong-pulse" />
@@ -351,7 +351,7 @@ export default function AdvisorTeam() {
                       }}
                       className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
                     >
-                      Try Again
+                      Intentar de nuevo
                     </button>
                   </div>
                 )}
@@ -374,9 +374,9 @@ export default function AdvisorTeam() {
             )}
 
             <div>
-              <h3 className="text-lg font-semibold text-dark mb-4">Previous Analyses</h3>
+              <h3 className="text-lg font-semibold text-dark mb-4">Análisis previos</h3>
               {jobs.length === 0 ? (
-                <p className="text-gray-500 italic">No previous analyses found. Start your first analysis above!</p>
+                <p className="text-gray-500 italic">No se encontraron análisis previos. ¡Inicia tu primer análisis arriba!</p>
               ) : (
                 <div className="space-y-3">
                   {jobs.slice(0, 5).map((job) => (
@@ -386,7 +386,7 @@ export default function AdvisorTeam() {
                     >
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">
-                          Analysis #{job.id.slice(0, 8)}
+                          Análisis #{job.id.slice(0, 8)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {formatDate(job.created_at)}
@@ -401,7 +401,7 @@ export default function AdvisorTeam() {
                             onClick={() => router.push(`/analysis?job_id=${job.id}`)}
                             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 text-sm font-semibold"
                           >
-                            View
+                            Ver
                           </button>
                         )}
                       </div>

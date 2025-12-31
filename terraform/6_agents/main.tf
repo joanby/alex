@@ -173,6 +173,7 @@ resource "aws_iam_role_policy" "lambda_agents_policy" {
           "arn:aws:bedrock:${var.bedrock_region}::foundation-model/*",
           "arn:aws:bedrock:${var.bedrock_region}:*:inference-profile/*"
         ]
+        /*Resource = ["*"] Cambiar por esta línea si el ser tan granular en los permisos te da errores de acceso al modelo por región*/
       }
     ]
   })

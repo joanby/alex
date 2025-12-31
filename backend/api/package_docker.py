@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Package the FastAPI API for Lambda deployment using Docker.
-This ensures binary compatibility with Lambda's runtime environment.
+Empaqueta la API de FastAPI para su despliegue en Lambda usando Docker.
+Esto asegura la compatibilidad binaria con el entorno de ejecución de Lambda.
 """
 
 import os
@@ -13,8 +13,8 @@ import tempfile
 import zipfile
 
 def run_command(cmd, cwd=None):
-    """Run a shell command and handle errors."""
-    print(f"Running: {' '.join(cmd)}")
+    """Ejecuta un comando de shell y maneja los errores."""
+    print(f"Ejecutando: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error: {result.stderr}")
@@ -22,54 +22,54 @@ def run_command(cmd, cwd=None):
     return result.stdout
 
 def main():
-    # Get the API directory
+    # Obtener el directorio de la API
     api_dir = Path(__file__).parent.absolute()
     backend_dir = api_dir.parent
     project_root = backend_dir.parent
 
-    print(f"API directory: {api_dir}")
-    print(f"Backend directory: {backend_dir}")
+    print(f"Directorio de la API: {api_dir}")
+    print(f"Directorio backend: {backend_dir}")
 
-    # Check if Docker is running
+    # Verificar si Docker está corriendo
     try:
         run_command(["docker", "info"])
     except Exception as e:
-        print("Error: Docker is not running or not installed")
-        print("Please ensure Docker Desktop is running and try again")
+        print("Error: Docker no está en funcionamiento o no está instalado")
+        print("Por favor, asegúrese de que Docker Desktop esté en funcionamiento e intente de nuevo")
         sys.exit(1)
 
-    # Create temp directory for packaging
+    # Crear directorio temporal para empaquetar
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         package_dir = temp_path / "package"
         package_dir.mkdir()
 
-        print(f"Packaging in: {package_dir}")
+        print(f"Empaquetando en: {package_dir}")
 
-        # Copy API code
+        # Copiar el código de la API
         api_package = package_dir / "api"
         shutil.copytree(api_dir, api_package, ignore=shutil.ignore_patterns(
             "__pycache__", "*.pyc", ".env*", "*.zip", "package_docker.py", "test_*.py"
         ))
 
-        # Copy lambda_handler.py to root level for Lambda to find it
+        # Copiar lambda_handler.py al nivel raíz para que Lambda lo encuentre
         shutil.copy2(api_dir / "lambda_handler.py", package_dir / "lambda_handler.py")
 
-        # Copy database package
+        # Copiar el paquete de base de datos
         database_src = backend_dir / "database" / "src"
         database_dst = package_dir / "src"
         if database_src.exists():
             shutil.copytree(database_src, database_dst, ignore=shutil.ignore_patterns(
                 "__pycache__", "*.pyc"
             ))
-            print(f"Copied database package from {database_src}")
+            print(f"Paquete de base de datos copiado desde {database_src}")
         else:
-            print(f"Warning: Database package not found at {database_src}")
+            print(f"Advertencia: Paquete de base de datos no encontrado en {database_src}")
 
-        # Create requirements.txt from pyproject.toml
+        # Crear requirements.txt desde pyproject.toml
         requirements_file = package_dir / "requirements.txt"
         with open(requirements_file, "w") as f:
-            # Core dependencies
+            # Dependencias principales
             f.write("fastapi>=0.116.0\n")
             f.write("uvicorn>=0.35.0\n")
             f.write("mangum>=0.19.0\n")
@@ -78,18 +78,18 @@ def main():
             f.write("pydantic>=2.0.0\n")
             f.write("python-dotenv>=1.0.0\n")
 
-        # Create Dockerfile
+        # Crear el Dockerfile
         dockerfile_content = """
 FROM public.ecr.aws/lambda/python:3.13
 
-# Copy requirements and install dependencies
+# Copiar requirements e instalar dependencias
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt -t /var/task
 
-# Copy application code
+# Copiar el código de la aplicación
 COPY . /var/task/
 
-# Set the handler
+# Configurar el handler
 CMD ["api.main.handler"]
 """
 
@@ -97,8 +97,8 @@ CMD ["api.main.handler"]
         with open(dockerfile, "w") as f:
             f.write(dockerfile_content)
 
-        # Build Docker image for x86_64 architecture (Lambda runtime)
-        print("Building Docker image for x86_64 architecture...")
+        # Construir imagen Docker para arquitectura x86_64 (entorno Lambda)
+        print("Construyendo imagen Docker para arquitectura x86_64...")
         run_command([
             "docker", "build",
             "--platform", "linux/amd64",
@@ -106,21 +106,21 @@ CMD ["api.main.handler"]
             "."
         ], cwd=package_dir)
 
-        # Create container and extract files
-        print("Extracting Lambda package...")
+        # Crear contenedor y extraer archivos
+        print("Extrayendo paquete Lambda...")
         container_name = "alex-api-extract"
 
-        # Remove container if it exists
+        # Eliminar el contenedor si existe
         run_command(["docker", "rm", "-f", container_name], cwd=package_dir)
 
-        # Create container
+        # Crear el contenedor
         run_command([
             "docker", "create",
             "--name", container_name,
             "alex-api-packager"
         ], cwd=package_dir)
 
-        # Extract /var/task contents
+        # Extraer contenido de /var/task
         extract_dir = temp_path / "lambda"
         extract_dir.mkdir()
 
@@ -130,20 +130,20 @@ CMD ["api.main.handler"]
             str(extract_dir)
         ])
 
-        # Clean up container
+        # Limpiar contenedor
         run_command(["docker", "rm", "-f", container_name])
 
-        # Create the final zip
+        # Crear el zip final
         zip_path = api_dir / "api_lambda.zip"
-        print(f"Creating zip file: {zip_path}")
+        print(f"Creando archivo zip: {zip_path}")
 
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(extract_dir):
-                # Skip __pycache__ directories
+                # Saltar directorios __pycache__
                 dirs[:] = [d for d in dirs if d != '__pycache__']
 
                 for file in files:
-                    # Skip .pyc files
+                    # Saltar archivos .pyc
                     if file.endswith('.pyc'):
                         continue
 
@@ -151,18 +151,18 @@ CMD ["api.main.handler"]
                     arcname = file_path.relative_to(extract_dir)
                     zipf.write(file_path, arcname)
 
-        # Get file size
+        # Obtener tamaño de archivo
         size_mb = zip_path.stat().st_size / (1024 * 1024)
-        print(f"✅ Lambda package created: {zip_path} ({size_mb:.2f} MB)")
+        print(f"✅ Paquete Lambda creado: {zip_path} ({size_mb:.2f} MB)")
 
-        # Verify the package
-        print("\nPackage contents (first 20 files):")
+        # Verificar el paquete
+        print("\nContenido del paquete (primeros 20 archivos):")
         with zipfile.ZipFile(zip_path, 'r') as zipf:
             files = zipf.namelist()[:20]
             for f in files:
                 print(f"  - {f}")
             if len(zipf.namelist()) > 20:
-                print(f"  ... and {len(zipf.namelist()) - 20} more files")
+                print(f"  ... y {len(zipf.namelist()) - 20} archivos más")
 
 if __name__ == "__main__":
     main()

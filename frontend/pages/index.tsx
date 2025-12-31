@@ -6,10 +6,10 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Alex AI Financial Advisor - Intelligent Portfolio Management</title>
+        <title>Alex AI Financial Advisor - Gestión de Portafolios Inteligente</title>
       </Head>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50">
-      {/* Navigation */}
+      {/* Navegación */}
       <nav className="px-8 py-6 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="text-2xl font-bold text-dark">
@@ -19,12 +19,12 @@ export default function Home() {
             <SignedOut>
               <SignInButton mode="modal">
                 <button className="px-6 py-2 text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
-                  Sign In
+                  Iniciar sesión
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
                 <button className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors">
-                  Get Started
+                  Comenzar
                 </button>
               </SignUpButton>
             </SignedOut>
@@ -32,7 +32,7 @@ export default function Home() {
               <div className="flex items-center gap-4">
                 <Link href="/dashboard">
                   <button className="px-6 py-2 bg-ai-accent text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    Go to Dashboard
+                    Ir al Panel
                   </button>
                 </Link>
                 <UserButton afterSignOutUrl="/" />
@@ -42,118 +42,118 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Sección principal */}
       <section className="px-8 py-20">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl font-bold text-dark mb-6">
-            Your AI-Powered Financial Future
+            Tu Futuro Financiero Potenciado por IA
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Experience the power of autonomous AI agents working together to analyze your portfolio, 
-            plan your retirement, and optimize your investments.
+            Experimenta el poder de agentes autónomos de IA trabajando juntos para analizar tu portafolio,
+            planificar tu jubilación y optimizar tus inversiones.
           </p>
           <div className="flex gap-6 justify-center">
             <SignedOut>
               <SignUpButton mode="modal">
                 <button className="px-8 py-4 bg-ai-accent text-white text-lg rounded-lg hover:bg-purple-700 transition-colors shadow-lg">
-                  Start Your Analysis
+                  Iniciar tu análisis
                 </button>
               </SignUpButton>
             </SignedOut>
             <SignedIn>
               <Link href="/dashboard">
                 <button className="px-8 py-4 bg-ai-accent text-white text-lg rounded-lg hover:bg-purple-700 transition-colors shadow-lg">
-                  Open Dashboard
+                  Abrir Panel
                 </button>
               </Link>
             </SignedIn>
             <button className="px-8 py-4 border-2 border-primary text-primary text-lg rounded-lg hover:bg-primary hover:text-white transition-colors">
-              Watch Demo
+              Ver Demostración
             </button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Sección de características */}
       <section className="px-8 py-20 bg-white">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-center text-dark mb-12">
-            Meet Your AI Advisory Team
+            Conoce a tu equipo asesor de IA
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center p-6 rounded-xl hover:shadow-lg transition-shadow">
               <div className="text-4xl mb-4">🎯</div>
-              <h3 className="text-xl font-semibold text-ai-accent mb-2">Financial Planner</h3>
-              <p className="text-gray-600">Coordinates your complete financial analysis with intelligent orchestration</p>
+              <h3 className="text-xl font-semibold text-ai-accent mb-2">Planificador Financiero</h3>
+              <p className="text-gray-600">Coordina tu análisis financiero completo con una orquestación inteligente</p>
             </div>
             <div className="text-center p-6 rounded-xl hover:shadow-lg transition-shadow">
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold text-primary mb-2">Portfolio Analyst</h3>
-              <p className="text-gray-600">Deep analysis of holdings, performance metrics, and risk assessment</p>
+              <h3 className="text-xl font-semibold text-primary mb-2">Analista de Portafolio</h3>
+              <p className="text-gray-600">Análisis profundo de tus posiciones, métricas de rendimiento y evaluación de riesgo</p>
             </div>
             <div className="text-center p-6 rounded-xl hover:shadow-lg transition-shadow">
               <div className="text-4xl mb-4">📈</div>
-              <h3 className="text-xl font-semibold text-success mb-2">Chart Specialist</h3>
-              <p className="text-gray-600">Visualizes your portfolio composition with interactive charts</p>
+              <h3 className="text-xl font-semibold text-success mb-2">Especialista en Gráficas</h3>
+              <p className="text-gray-600">Visualiza la composición de tu portafolio con gráficos interactivos</p>
             </div>
             <div className="text-center p-6 rounded-xl hover:shadow-lg transition-shadow">
               <div className="text-4xl mb-4">🎯</div>
-              <h3 className="text-xl font-semibold text-accent mb-2">Retirement Planner</h3>
-              <p className="text-gray-600">Projects your retirement readiness with Monte Carlo simulations</p>
+              <h3 className="text-xl font-semibold text-accent mb-2">Planificador de Jubilación</h3>
+              <p className="text-gray-600">Proyecta tu preparación para la jubilación con simulaciones Monte Carlo</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* Sección de beneficios */}
       <section className="px-8 py-20 bg-gradient-to-r from-primary/10 to-ai-accent/10">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-center text-dark mb-12">
-            Enterprise-Grade AI Advisory
+            Asesoría de IA de Nivel Empresarial
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-xl shadow-md">
               <div className="text-accent text-2xl mb-4">⚡</div>
-              <h3 className="text-xl font-semibold mb-3">Real-Time Analysis</h3>
-              <p className="text-gray-600">Watch AI agents collaborate in parallel to analyze your complete financial picture</p>
+              <h3 className="text-xl font-semibold mb-3">Análisis en Tiempo Real</h3>
+              <p className="text-gray-600">Observa cómo los agentes de IA colaboran en paralelo para analizar tu visión financiera completa</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-md">
               <div className="text-accent text-2xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold mb-3">Bank-Level Security</h3>
-              <p className="text-gray-600">Your data is protected with enterprise security and row-level access controls</p>
+              <h3 className="text-xl font-semibold mb-3">Seguridad de Nivel Bancario</h3>
+              <p className="text-gray-600">Tus datos están protegidos con seguridad empresarial y controles de acceso a nivel de fila</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-md">
               <div className="text-accent text-2xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold mb-3">Comprehensive Reports</h3>
-              <p className="text-gray-600">Detailed markdown reports with interactive charts and retirement projections</p>
+              <h3 className="text-xl font-semibold mb-3">Reportes Integrales</h3>
+              <p className="text-gray-600">Informes detallados en markdown con gráficos interactivos y proyecciones de jubilación</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Sección de llamado a la acción */}
       <section className="px-8 py-20 bg-dark text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-6">
-            Ready to Transform Your Financial Future?
+            ¿Listo para transformar tu futuro financiero?
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Join thousands of investors using AI to optimize their portfolios
+            Únete a miles de inversionistas que usan IA para optimizar sus portafolios
           </p>
           <SignUpButton mode="modal">
             <button className="px-8 py-4 bg-accent text-dark font-semibold text-lg rounded-lg hover:bg-yellow-500 transition-colors shadow-lg">
-              Get Started Free
+              Comienza gratis
             </button>
           </SignUpButton>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Pie de página */}
       <footer className="px-8 py-6 bg-gray-900 text-gray-400 text-center text-sm">
-        <p>© 2025 Alex AI Financial Advisor. All rights reserved.</p>
+        <p>© 2025 Alex AI Financial Advisor. Todos los derechos reservados.</p>
         <p className="mt-2">
-          This AI-generated advice has not been vetted by a qualified financial advisor and should not be used for trading decisions. 
-          For informational purposes only.
+          Este consejo generado por IA no ha sido revisado por un asesor financiero calificado y no debe usarse para decisiones de inversión.
+          Sólo para fines informativos.
         </p>
       </footer>
     </div>
